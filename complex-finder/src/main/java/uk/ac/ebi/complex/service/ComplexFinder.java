@@ -10,6 +10,7 @@ import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -38,6 +39,9 @@ public class ComplexFinder {
             }
         }
 
+        // Sort partial matches by similarity
+        partialMatches.sort((a, b) -> Float.compare(b.getSimilarity(), a.getSimilarity()));
+
         return new ComplexFinderResult<>(proteinAcs, exactMatches, partialMatches);
     }
 
@@ -61,13 +65,17 @@ public class ComplexFinder {
                                     proteinAc.equals(component.getPrimaryId()) || component.getOtherIds().stream().anyMatch(proteinAc::equals)))
                     .collect(Collectors.toList());
 
-            return new ComplexFinderResult.ComplexMatch<>(
-                    complex.getComplexAc(),
-                    getMatchType(complex, matchingProteins, extraProteins, missingProteins),
-                    matchingProteins,
-                    extraProteins,
-                    missingProteins,
-                    complex);
+            float similarity = calculateSimilarity(matchingProteins, extraProteins, missingProteins);
+            if (similarity > 0.5) {
+                return new ComplexFinderResult.ComplexMatch<>(
+                        complex.getComplexAc(),
+                        getMatchType(complex, matchingProteins, extraProteins, missingProteins),
+                        similarity,
+                        matchingProteins,
+                        extraProteins,
+                        missingProteins,
+                        complex);
+            }
         }
         return null;
     }
@@ -99,6 +107,15 @@ public class ComplexFinder {
             }
         }
         return null;
+    }
+
+    private float calculateSimilarity(
+            List<ComplexFinderResult.ComplexComponent> matchingProteins,
+            List<ComplexFinderResult.ComplexComponent> extraProteins,
+            List<String> missingProteins) {
+
+        int totalCount = matchingProteins.size() + extraProteins.size() + missingProteins.size();
+        return (float) matchingProteins.size() / (float) totalCount;
     }
 
     private Collection<ComplexFinderResult.ComplexComponent> getComplexProteins(IntactComplex complex) {

@@ -34,6 +34,7 @@ public class ComplexFinderResult<T> {
     public static class ComplexMatch<T> {
         private String complexAc;
         private MatchType matchType;
+        private float similarity;
         private Collection<ComplexComponent> matchingProteins;
         private Collection<ComplexComponent> extraProteins;
         private Collection<String> missingProteins;
