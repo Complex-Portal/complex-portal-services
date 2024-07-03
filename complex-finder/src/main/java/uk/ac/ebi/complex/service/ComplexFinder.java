@@ -23,8 +23,6 @@ public class ComplexFinder {
         Collection<IntactComplex> complexes = this.intactDao.getComplexDao()
                 .getComplexesInvolvingInteractors(Xref.UNIPROTKB_MI, proteinAcs);
 
-        complexes.forEach(c -> System.out.println(c.getComplexAc()));
-
         List<ComplexFinderResult.ComplexMatch<IntactComplex>> exactMatches = new ArrayList<>();
         List<ComplexFinderResult.ComplexMatch<IntactComplex>> partialMatches = new ArrayList<>();
 
