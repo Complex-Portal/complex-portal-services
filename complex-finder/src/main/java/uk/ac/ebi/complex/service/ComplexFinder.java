@@ -66,7 +66,7 @@ public class ComplexFinder {
                     .collect(Collectors.toList());
 
             float similarity = calculateSimilarity(matchingProteins, extraProteins, missingProteins);
-            if (similarity > 0.5) {
+            if (similarity >= 0.5) {
                 return new ComplexFinderResult.ComplexMatch<>(
                         complex.getComplexAc(),
                         getMatchType(complex, matchingProteins, extraProteins, missingProteins),
