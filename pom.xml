@@ -19,7 +19,7 @@
     <name>Complex Services</name>
 
     <properties>
-        <psi.jami.version>3.5.2-SNAPSHOT</psi.jami.version>
+        <psi.jami.version>3.6.0-SNAPSHOT</psi.jami.version>
         <intact.jami.version>3.1.0-SNAPSHOT</intact.jami.version>
         <lombok.version>1.18.28</lombok.version>
     </properties>

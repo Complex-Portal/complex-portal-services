@@ -35,19 +35,9 @@ public class ComplexFinderResult<T> {
         private String complexAc;
         private MatchType matchType;
         private float similarity;
-        private Collection<ComplexComponent> matchingProteins;
-        private Collection<ComplexComponent> extraProteins;
+        private Collection<String> matchingProteins;
+        private Collection<String> extraProteins;
         private Collection<String> missingProteins;
         private T complex;
-    }
-
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Getter
-    @Setter
-    @EqualsAndHashCode
-    public static class ComplexComponent {
-        private String primaryId;
-        private Collection<String> otherIds;
     }
 }
