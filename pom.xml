@@ -26,6 +26,7 @@
 
     <modules>
         <module>complex-finder</module>
+        <module>uniplex-import</module>
     </modules>
 
     <scm>
