@@ -15,9 +15,13 @@ import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, UniplexComplex>, ItemStream {
+
+    private static final Logger LOG = Logger.getLogger(UniplexClusterProcessor.class.getName());
 
     private final ComplexFinder complexFinder;
     private final String reportDirectoryName;
@@ -42,6 +46,13 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                             item.getUniprotAcs(),
                             complexMatch.getComplexAc());
                 }
+                LOG.warning("Clusters " +
+                        String.join(",", item.getClusterIds()) +
+                        "matched exactly to multiple complexes: " +
+                        complexFinderResult.getExactMatches()
+                                .stream()
+                                .map(ComplexFinderResult.ComplexMatch::getComplexAc)
+                                .collect(Collectors.joining(",")));
                 return null;
             } else {
                 ComplexFinderResult.ComplexMatch<IntactComplex> complexMatch = complexFinderResult.getExactMatches().iterator().next();
@@ -84,7 +95,15 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
 
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
-
+        Assert.notNull(executionContext, "ExecutionContext must not be null");
+        try {
+            this.exactMatchesReportWriter.flush();
+            this.multipleExactMatchesReportWriter.flush();
+            this.partialMatchesReportWriter.flush();
+            this.noMatchesReportWriter.flush();
+        } catch (IOException e) {
+            throw new ItemStreamException("Report file writer could not be flushed", e);
+        }
     }
 
     @Override
@@ -95,7 +114,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
             this.partialMatchesReportWriter.close();
             this.noMatchesReportWriter.close();
         } catch (IOException e) {
-            throw new ItemStreamException("Report file  writer could not be closed", e);
+            throw new ItemStreamException("Report file writer could not be closed", e);
         }
     }
 

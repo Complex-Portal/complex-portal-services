@@ -9,11 +9,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @AllArgsConstructor
 public class UniplexFileProcessor {
+
+    private static final Logger LOG = Logger.getLogger(UniplexFileProcessor.class.getName());
 
     private final String inputFileName;
     private final String outputFileName;
@@ -24,15 +27,15 @@ public class UniplexFileProcessor {
         // First delete the temp file if it exists
         File tempOutputFile = new File(outputFileName);
         if (tempOutputFile.exists()) {
-            System.out.println("Deleting file " + outputFileName + "...");
+            LOG.info("Deleting file " + outputFileName + "...");
             tempOutputFile.delete();
         }
 
-        System.out.println("Reading Uniplex file...");
+        LOG.info("Reading Uniplex file...");
         Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFileName);
-        System.out.println("Checking duplicates...");
+        LOG.info("Checking duplicates...");
         Collection<UniplexCluster> clustersWithoutDuplicates = mergeDuplicateClusters(clusters);
-        System.out.println("Writing output file...");
+        LOG.info("Writing output file...");
         uniplexClusterWriter.writeClustersToFile(clustersWithoutDuplicates, outputFileName);
         // TODO: filter out low confidence clusters
     }
@@ -49,7 +52,7 @@ public class UniplexFileProcessor {
     }
 
     private UniplexCluster mergeClusters(UniplexCluster clusterA, UniplexCluster clusterB) {
-        System.out.println("Duplicates cluster found: " +
+        LOG.info("Duplicates cluster found: " +
                 String.join(",", clusterA.getClusterIds()) +
                 " and " +
                 String.join(",", clusterB.getClusterIds()));
