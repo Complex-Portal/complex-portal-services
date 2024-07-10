@@ -195,6 +195,7 @@
         <constructor-arg index="1" value="${header}"/>
     </bean>
     <bean id="uniplexComplexWriter" class="uk.ac.ebi.complex.service.writer.UniplexComplexWriter" lazy-init="true">
+        <constructor-arg index="0" ref="complexService"/>
     </bean>
 
     <!-- Import Steps -->
