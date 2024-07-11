@@ -6,20 +6,19 @@ import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.Assert;
-import uk.ac.ebi.complex.service.model.UniplexCluster;
+import uk.ac.ebi.complex.service.UniplexComplexManager;
 import uk.ac.ebi.complex.service.model.UniplexComplex;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 import uk.ac.ebi.intact.jami.synchronizer.listener.impl.DbSynchronizerStatisticsReporter;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
-public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStream  {
+public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStream {
 
     private static final Logger LOG = Logger.getLogger(UniplexComplexWriter.class.getName());
 
@@ -29,6 +28,7 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
     public final static String MERGED_TRANSIENT_MAP_COUNT = "merged.transient.map";
     public final static String REPLACED_TRANSIENT_MAP_COUNT = "transient.replaced.map";
 
+    private final UniplexComplexManager uniplexComplexManager;
     private final ComplexService complexService;
     private DbSynchronizerStatisticsReporter synchronizerListener;
 
@@ -134,43 +134,17 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
 
     @Override
     public void write(List<? extends UniplexComplex> items) throws Exception {
-        List<IntactComplex> complexesToSave = items.stream()
-                .filter(Objects::nonNull)
-                .map(complex -> {
-                    if (complex.getExistingComplex() != null) {
-                        return mergeWithExistingComplex(complex.getCluster(), complex.getExistingComplex());
-                    } else {
-                        return saveNewComplex(complex.getCluster());
-                    }
-                })
-                .collect(Collectors.toList());
+        List<IntactComplex> complexesToSave = new ArrayList<>();
+        for (UniplexComplex complex: items) {
+            if (complex.getExistingComplex() != null) {
+                complexesToSave.add(uniplexComplexManager.mergeClusterWithExistingComplex(
+                        complex.getCluster(),
+                        complex.getExistingComplex()));
+            } else {
+                complexesToSave.add(uniplexComplexManager.newComplexFromCluster(complex.getCluster()));
+            }
+        }
 
         this.complexService.saveOrUpdate(complexesToSave);
-    }
-
-    // TODO: create and merge complexes with uniplex data
-
-    private IntactComplex mergeWithExistingComplex(UniplexCluster uniplexCluster, IntactComplex complex) {
-        // existingComplex => merge uniplex complex with existing complex
-        // - new Xref for each cluster if
-        // - xrefs need to have an ECO code associated (we already do this for GO xrefs)
-        // - new annotation for the confidence
-        return null;
-    }
-
-    private IntactComplex saveNewComplex(UniplexCluster uniplexCluster) {
-        // new complex from scratch
-        // - xref for each cluster if
-        // - xrefs need to have an ECO code associated
-        // - annotation for the confidence
-        // - participants for each protei
-        // - new interactor may need to be imported from UniProt and created
-        // - complex ac - same sequence as curated complexes
-        // - short label can be anything
-        // - systematic name using protein gene names
-        // - Complex type = stable complex
-        // - Interaction type = physical association
-        // - status = ready for release
-        return null;
     }
 }

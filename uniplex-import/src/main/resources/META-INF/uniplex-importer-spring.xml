@@ -162,6 +162,11 @@
     <bean id="complexFinder" class="uk.ac.ebi.complex.service.ComplexFinder" lazy-init="true">
         <constructor-arg index="0" ref="intactDao"/>
     </bean>
+    <bean id="uniprotProteinFetcher" class="psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher"/>
+    <bean id="uniplexComplexManager" class="uk.ac.ebi.complex.service.UniplexComplexManager" lazy-init="true">
+        <constructor-arg index="0" ref="intactDao"/>
+        <constructor-arg index="1" ref="uniprotProteinFetcher"/>
+    </bean>
 
     <bean id="uniplexFileProcessorTasklet" class="uk.ac.ebi.complex.service.processor.UniplexFileProcessorTasklet">
         <constructor-arg index="0" ref="uniplexFileProcessor"/>
@@ -195,20 +200,27 @@
         <constructor-arg index="1" value="${header}"/>
     </bean>
     <bean id="uniplexComplexWriter" class="uk.ac.ebi.complex.service.writer.UniplexComplexWriter" lazy-init="true">
-        <constructor-arg index="0" ref="complexService"/>
+        <constructor-arg index="0" ref="uniplexComplexManager"/>
+        <constructor-arg index="1" ref="complexService"/>
     </bean>
 
     <!-- Import Steps -->
     <batch:step id="uniplexClusterImportStep" parent="basicBatchStep">
         <batch:tasklet transaction-manager="jamiTransactionManager">
             <batch:listeners>
-                <batch:listener ref="basicChunkLoggerListener" />
+                <batch:listener ref="basicChunkLoggerListener"/>
             </batch:listeners>
 
             <batch:chunk reader="uniplexFileReader"
                          processor="uniplexClusterProcessor"
                          writer="uniplexComplexWriter"
-                         commit-interval="50">
+                         commit-interval="50"
+                         retry-limit="10">
+
+                <batch:retryable-exception-classes>
+                    <batch:include class="org.springframework.batch.item.ItemStreamException"/>
+                    <batch:include class="javax.net.ssl.SSLHandshakeException"/>
+                </batch:retryable-exception-classes>
 
                 <batch:streams>
                     <batch:stream ref="uniplexFileReader"/>
