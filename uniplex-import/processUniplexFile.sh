@@ -13,4 +13,4 @@ OUTPUT_FILE_NAME=$2
 SEPARATOR=$3
 HEADER=$4
 
-mvn clean -U install -P process-uniplex-file -DinputFileName=$INPUT_FILE -DoutputFileName=$OUTPUT_FILE_NAME -Dseparator=$SEPARATOR -Dheader=$HEADER
+mvn clean -U install -P process-uniplex-file -DinputFileName=$INPUT_FILE -DoutputFileName=$OUTPUT_FILE_NAME -Dseparator=$SEPARATOR -Dheader=$HEADER -Dmaven.test.skip

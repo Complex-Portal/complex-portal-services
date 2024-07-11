@@ -20,4 +20,4 @@ echo "Output directory: $OUTPUT_DIRECTORY"
 echo "Separator: $SEPARATOR"
 echo "Header: $HEADER"
 
-mvn clean -U install -P import-uniplex-clusters,${PROFILE} -Djob.name=uniplexClusterImport -Dinput.file=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER
+mvn clean -U install -P import-uniplex-clusters,${PROFILE} -Djob.name=uniplexClusterImport -Dinput.file=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -Dmaven.test.skip
