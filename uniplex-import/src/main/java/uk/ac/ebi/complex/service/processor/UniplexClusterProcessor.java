@@ -38,7 +38,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
 
         if (!complexFinderResult.getExactMatches().isEmpty()) {
             if (complexFinderResult.getExactMatches().size() > 1) {
-                for (ComplexFinderResult.ComplexMatch<IntactComplex> complexMatch: complexFinderResult.getPartialMatches()) {
+                for (ComplexFinderResult.ExactMatch<IntactComplex> complexMatch: complexFinderResult.getExactMatches()) {
                     multipleExactMatchesReportWriter.write(
                             complexMatch.getMatchType(),
                             item.getClusterIds(),
@@ -51,11 +51,11 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                         "matched exactly to multiple complexes: " +
                         complexFinderResult.getExactMatches()
                                 .stream()
-                                .map(ComplexFinderResult.ComplexMatch::getComplexAc)
+                                .map(ComplexFinderResult.ExactMatch::getComplexAc)
                                 .collect(Collectors.joining(",")));
                 return null;
             } else {
-                ComplexFinderResult.ComplexMatch<IntactComplex> complexMatch = complexFinderResult.getExactMatches().iterator().next();
+                ComplexFinderResult.ExactMatch<IntactComplex> complexMatch = complexFinderResult.getExactMatches().iterator().next();
                 exactMatchesReportWriter.write(
                         complexMatch.getMatchType(),
                         item.getClusterIds(),
@@ -65,7 +65,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                 return new UniplexComplex(item, complexMatch.getComplex());
             }
         } else if (!complexFinderResult.getPartialMatches().isEmpty()) {
-            for (ComplexFinderResult.ComplexMatch<IntactComplex> complexMatch: complexFinderResult.getPartialMatches()) {
+            for (ComplexFinderResult.PartialMatch<IntactComplex> complexMatch: complexFinderResult.getPartialMatches()) {
                 partialMatchesReportWriter.write(
                         complexMatch.getMatchType(),
                         item.getClusterIds(),

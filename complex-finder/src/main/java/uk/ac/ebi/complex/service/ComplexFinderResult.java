@@ -15,8 +15,8 @@ import java.util.Collection;
 @EqualsAndHashCode
 public class ComplexFinderResult<T> {
     private Collection<String> proteins;
-    private Collection<ComplexMatch<T>> exactMatches;
-    private Collection<ComplexMatch<T>> partialMatches;
+    private Collection<ExactMatch<T>> exactMatches;
+    private Collection<PartialMatch<T>> partialMatches;
 
     public enum MatchType {
         EXACT_MATCH,
@@ -31,10 +31,20 @@ public class ComplexFinderResult<T> {
     @Getter
     @Setter
     @EqualsAndHashCode
-    public static class ComplexMatch<T> {
+    public static class ExactMatch<T> {
         private String complexAc;
         private MatchType matchType;
-        private float similarity;
+        private T complex;
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Getter
+    @Setter
+    @EqualsAndHashCode
+    public static class PartialMatch<T> {
+        private String complexAc;
+        private MatchType matchType;
         private Collection<String> matchingProteins;
         private Collection<String> extraProteins;
         private Collection<String> missingProteins;
