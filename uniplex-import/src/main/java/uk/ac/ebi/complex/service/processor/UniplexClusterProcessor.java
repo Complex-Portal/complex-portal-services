@@ -1,6 +1,8 @@
 package uk.ac.ebi.complex.service.processor;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStream;
@@ -15,13 +17,12 @@ import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, UniplexComplex>, ItemStream {
 
-    private static final Logger LOG = Logger.getLogger(UniplexClusterProcessor.class.getName());
+    private static final Log LOG = LogFactory.getLog(UniplexClusterProcessor.class);
 
     private final ComplexFinder complexFinder;
     private final String reportDirectoryName;
@@ -46,7 +47,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                             item.getUniprotAcs(),
                             complexMatch.getComplexAc());
                 }
-                LOG.warning("Clusters " +
+                LOG.warn("Clusters " +
                         String.join(",", item.getClusterIds()) +
                         "matched exactly to multiple complexes: " +
                         complexFinderResult.getExactMatches()

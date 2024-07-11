@@ -1,6 +1,8 @@
 package uk.ac.ebi.complex.service.processor;
 
 import lombok.AllArgsConstructor;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.reader.UniplexClusterReader;
 import uk.ac.ebi.complex.service.writer.UniplexClusterWriter;
@@ -9,14 +11,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @AllArgsConstructor
 public class UniplexFileProcessor {
 
-    private static final Logger LOG = Logger.getLogger(UniplexFileProcessor.class.getName());
+    private static final Log LOG = LogFactory.getLog(UniplexFileProcessor.class);
 
     private final String inputFileName;
     private final String outputFileName;
