@@ -17,7 +17,9 @@ import java.util.stream.Collectors;
 
 public class ComplexFinder {
 
-    private static final int NUMBER_OF_DIFFERENT_PROTEINS_FOR_PARTIAL_MATCHES = 1;
+    // TODO: agree on these numbers
+    private static final int MAX_NUMBER_OF_DIFFERENT_PROTEINS_FOR_PARTIAL_MATCHES = 1;
+    private static final int MIN_NUMBER_OF_MATCHING_PROTEINS_FOR_PARTIAL_MATCHES = 2;
 
     private final IntactDao intactDao;
     private final CollectionComparator<ModelledComparableParticipant> comparableParticipantsComparator;
@@ -136,7 +138,10 @@ public class ComplexFinder {
                     .filter(proteinAc -> complexProteins.stream().noneMatch(component -> proteinAc.equals(component.getInteractorId())))
                     .collect(Collectors.toList());
 
-            if ((extraProteins.size() + missingProteins.size()) <= NUMBER_OF_DIFFERENT_PROTEINS_FOR_PARTIAL_MATCHES) {
+            // We only consider matching proteins that have at least a certain number of proteins in common
+            // with the cluster, and no more than a certain number of proteins different.
+            if (matchingProteins.size() >= MIN_NUMBER_OF_MATCHING_PROTEINS_FOR_PARTIAL_MATCHES &&
+                    (extraProteins.size() + missingProteins.size()) <= MAX_NUMBER_OF_DIFFERENT_PROTEINS_FOR_PARTIAL_MATCHES) {
                 return new ComplexFinderResult.PartialMatch<>(
                         complex.getComplexAc(),
                         getPartialMatchType(matchingProteins, extraProteins, missingProteins),

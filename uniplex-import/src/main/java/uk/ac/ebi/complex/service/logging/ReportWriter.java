@@ -1,4 +1,4 @@
-package uk.ac.ebi.complex.service.writer;
+package uk.ac.ebi.complex.service.logging;
 
 import com.opencsv.CSVWriterBuilder;
 import com.opencsv.ICSVWriter;
@@ -10,9 +10,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collection;
 
-public class ReportWriter {
+public abstract class ReportWriter {
 
-    private final ICSVWriter csvWriter;
+    protected final ICSVWriter csvWriter;
 
     public ReportWriter(File outputFile, String separator, boolean header) throws IOException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
@@ -26,9 +26,7 @@ public class ReportWriter {
         }
     }
 
-    private void writeHeader() {
-        csvWriter.writeNext(new String[]{ "match_type", "cluster_ids", "cluster_confidence", "uniprot_acs", "complex_ac" });
-    }
+    protected abstract void writeHeader();
 
     public void write(ComplexFinderResult.MatchType matchType,
                       Collection<String> clusterIds,

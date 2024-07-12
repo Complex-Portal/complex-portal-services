@@ -1,0 +1,276 @@
+package uk.ac.ebi.complex.service.manager;
+
+import lombok.RequiredArgsConstructor;
+import psidev.psi.mi.jami.bridges.exception.BridgeFailedException;
+import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
+import psidev.psi.mi.jami.model.Alias;
+import psidev.psi.mi.jami.model.Entity;
+import psidev.psi.mi.jami.model.Protein;
+import psidev.psi.mi.jami.model.Xref;
+import uk.ac.ebi.complex.service.exception.CvTermNotFoundException;
+import uk.ac.ebi.complex.service.exception.OrganismNotFoundException;
+import uk.ac.ebi.complex.service.exception.ProteinException;
+import uk.ac.ebi.complex.service.exception.SourceNotFoundException;
+import uk.ac.ebi.complex.service.exception.UserNotFoundException;
+import uk.ac.ebi.complex.service.model.UniplexCluster;
+import uk.ac.ebi.complex.service.service.IntactComplexService;
+import uk.ac.ebi.intact.jami.model.extension.ComplexHumapXref;
+import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
+import uk.ac.ebi.intact.jami.model.extension.IntactCvTerm;
+import uk.ac.ebi.intact.jami.model.extension.IntactModelledParticipant;
+import uk.ac.ebi.intact.jami.model.extension.IntactOrganism;
+import uk.ac.ebi.intact.jami.model.extension.IntactProtein;
+import uk.ac.ebi.intact.jami.model.extension.IntactSource;
+import uk.ac.ebi.intact.jami.model.extension.InteractorAnnotation;
+import uk.ac.ebi.intact.jami.model.extension.InteractorXref;
+import uk.ac.ebi.intact.jami.model.lifecycle.ComplexLifeCycleEvent;
+import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleEventType;
+import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleStatus;
+import uk.ac.ebi.intact.jami.model.user.User;
+import uk.ac.ebi.intact.jami.synchronizer.FinderException;
+import uk.ac.ebi.intact.jami.synchronizer.PersisterException;
+import uk.ac.ebi.intact.jami.synchronizer.SynchronizerException;
+import uk.ac.ebi.intact.jami.utils.IntactUtils;
+
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@RequiredArgsConstructor
+public class UniplexComplexManager {
+
+    private static final String STABLE_COMPLEX_MI = "MI:1302";
+    private static final String PHYSICAL_ASSOCIATION_MI = "MI:0915";
+    private static final String GENE_NAME_MI = "MI:0301";
+    private static final Integer HUMAN_TAX_ID = 9606;
+
+    // TODO: replace the following ids with MI ids when these terms are created in OLS and imported in the DB
+    private final static String CONFIDENCE_TOPIC_ID = "IA:3600";
+    private final static String HUMAP_DATABASE_ID = "IA:3601";
+    private final static String CLUSTER_ID_QUALIFIER_ID = "IA:3602";
+    // TODO: should be ECO:0008004, but it's not yet created in the DB
+    private static final String ML_ECO_CODE = "IA:3603";
+
+    // TODO: this needs to be updated to an agreed creator, or we should take it as an input parameter to the job
+    private static final String CREATOR_USERNAME = "jmedina";
+
+    private final IntactComplexService intactComplexService;
+    private final UniprotProteinFetcher uniprotProteinFetcher;
+
+    private final Map<String, IntactCvTerm> cvTermMap = new HashMap<>();
+    private final Map<String, IntactSource> sourceMap = new HashMap<>();
+    private final Map<String, IntactProtein> proteinMap = new HashMap<>();
+    private final Map<String, User> userMap = new HashMap<>();
+    private final Map<Integer, IntactOrganism> organismMap = new HashMap<>();
+
+    public IntactComplex mergeClusterWithExistingComplex(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
+        addHumapXrefs(uniplexCluster, complex);
+        addConfidenceAnnotation(uniplexCluster, complex);
+        return complex;
+    }
+
+    public IntactComplex newComplexFromCluster(UniplexCluster uniplexCluster)
+            throws BridgeFailedException, FinderException, SynchronizerException, PersisterException,
+            SourceNotFoundException, CvTermNotFoundException, ProteinException, UserNotFoundException,
+            OrganismNotFoundException {
+
+        // TODO: what whould the short name be? Using cluster id for now
+        IntactComplex complex = new IntactComplex(uniplexCluster.getClusterIds().iterator().next());
+        setComplexAc(complex);
+        setOrganism(complex);
+        setComplexSource(complex);
+        setComplexType(complex);
+        setComplexEvidenceType(complex);
+        addHumapXrefs(uniplexCluster, complex);
+        addConfidenceAnnotation(uniplexCluster, complex);
+        setComplexComponents(uniplexCluster, complex);
+        // Systematic name is set after the components to have access to the gene names of the proteins
+        setComplexSystematicName(complex);
+        setComplexStatus(complex);
+        complex.setCreatedDate(new Date());
+        complex.setUpdatedDate(complex.getCreatedDate());
+
+        // TODO: do we want some description or function?
+
+        // TODO: update this when we have an actual flag or something
+        complex.setManuallyCurated(false);
+
+        // TODO: do these complexes need to be linked to any experiment?
+        //  Curated complexes are linked to experiments and it has something to do with releases
+
+        return complex;
+    }
+
+    private void setOrganism(IntactComplex complex) throws OrganismNotFoundException {
+        complex.setOrganism(findOrganism(HUMAN_TAX_ID));
+    }
+
+    private void setComplexEvidenceType(IntactComplex complex) throws CvTermNotFoundException {
+        IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
+        complex.setEvidenceType(evidenceType);
+    }
+
+    private void setComplexStatus(IntactComplex complex) throws UserNotFoundException {
+        User user = findUser(CREATOR_USERNAME);
+        complex.setCreator(user.getLogin());
+        complex.setUpdator(user.getLogin());
+
+        complex.getLifecycleEvents().add(
+                new ComplexLifeCycleEvent(LifeCycleEventType.CREATED, user, "New predicted complex"));
+        complex.getLifecycleEvents().add(
+                new ComplexLifeCycleEvent(LifeCycleEventType.READY_FOR_RELEASE, user, "Predicted complex read for release"));
+        complex.setStatus(LifeCycleStatus.READY_FOR_RELEASE);
+    }
+
+    private IntactProtein getIntactProtein(String proteinId) throws BridgeFailedException, FinderException, SynchronizerException, PersisterException, ProteinException {
+        if (proteinMap.containsKey(proteinId)) {
+            return proteinMap.get(proteinId);
+        }
+        Collection<IntactProtein> proteinByXref = intactComplexService.findProtein(proteinId);
+        if (!proteinByXref.isEmpty()) {
+            if (proteinByXref.size() == 1) {
+                return proteinByXref.iterator().next();
+            }
+            throw new ProteinException("Multiple proteins found in the DB for protein id '" + proteinId + "'");
+        } else {
+            Collection<Protein> uniprotProteins = uniprotProteinFetcher.fetchByIdentifier(proteinId);
+            if (!uniprotProteins.isEmpty()) {
+                if (uniprotProteins.size() == 1) {
+                    IntactProtein intactProtein = intactComplexService.convertProteinToPersistentObject(uniprotProteins.iterator().next());
+                    proteinMap.put(proteinId, intactProtein);
+                    return intactProtein;
+                }
+                throw new ProteinException("Multiple proteins fetch from UniProt for protein id '" + proteinId + "'");
+            }
+            throw new ProteinException("No proteins fetch from UniProt for protein id '" + proteinId + "'");
+        }
+    }
+
+    private void setComplexComponents(UniplexCluster uniplexCluster, IntactComplex complex) throws BridgeFailedException, FinderException, SynchronizerException, PersisterException, ProteinException {
+        for (String uniprotAc: uniplexCluster.getUniprotAcs()) {
+            IntactProtein intactProtein = getIntactProtein(uniprotAc);
+            complex.getParticipants().add(new IntactModelledParticipant(intactProtein));
+        }
+    }
+
+    private void addHumapXrefs(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
+        for (String clusterId: uniplexCluster.getClusterIds()) {
+            ComplexHumapXref xref = newHumapXref(clusterId);
+            complex.getXrefs().add(xref);
+        }
+    }
+
+    private ComplexHumapXref newHumapXref(String id) throws CvTermNotFoundException {
+        IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, HUMAP_DATABASE_ID);
+        IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, CLUSTER_ID_QUALIFIER_ID);
+        // TODO: in future versions we may need to increase the version
+        String version = "1";
+        ComplexHumapXref xref = new ComplexHumapXref(database, id, version, qualifier);
+        IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
+        xref.setEvidenceType(evidenceType);
+        return xref;
+    }
+
+    private void addConfidenceAnnotation(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
+        IntactCvTerm topic = findCvTerm(IntactUtils.TOPIC_OBJCLASS, CONFIDENCE_TOPIC_ID);
+        complex.getAnnotations().add(new InteractorAnnotation(topic, uniplexCluster.getClusterConfidence().toString()));
+    }
+
+    private void setComplexAc(IntactComplex complex) throws CvTermNotFoundException {
+        IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, Xref.COMPLEX_PORTAL_MI);
+        IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.COMPLEX_PRIMARY_MI);
+        // TODO: in future versions we may need to increase the version
+        String version = "1";
+        String acValue = intactComplexService.getNextComplexAc();
+        InteractorXref xref = new InteractorXref(database, acValue, version, qualifier);
+        complex.getIdentifiers().add(xref);
+    }
+
+    private void setComplexSystematicName(IntactComplex complex) {
+        String geneNamesConcatenated = complex.getParticipants()
+                .stream()
+                .map(Entity::getInteractor)
+                .map(interactor -> interactor.getAliases()
+                        .stream()
+                        .filter(alias -> GENE_NAME_MI.equals(alias.getType().getMIIdentifier()))
+                        .map(Alias::getName)
+                        .findFirst())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.joining("_"));
+
+        if (geneNamesConcatenated.isEmpty()) {
+            // TODO: what to do if we have no gene names?
+            complex.setSystematicName(complex.getShortName());
+        } else if (geneNamesConcatenated.length() > IntactUtils.MAX_ALIAS_NAME_LEN) {
+            // TODO: MAX_ALIAS_NAME_LEN is 4000, do we want a more reasonable limit?
+            complex.setSystematicName(geneNamesConcatenated.substring(0, IntactUtils.MAX_ALIAS_NAME_LEN));
+        } else {
+            complex.setSystematicName(geneNamesConcatenated);
+        }
+    }
+
+    private void setComplexSource(IntactComplex complex) throws SourceNotFoundException {
+        IntactSource source = findSource(HUMAP_DATABASE_ID);
+        complex.setSource(source);
+    }
+
+    private void setComplexType(IntactComplex complex) throws CvTermNotFoundException {
+        IntactCvTerm interactorType = findCvTerm(IntactUtils.INTERACTOR_TYPE_OBJCLASS, STABLE_COMPLEX_MI);
+        complex.setInteractorType(interactorType);
+        IntactCvTerm interactionType = findCvTerm(IntactUtils.INTERACTION_TYPE_OBJCLASS, PHYSICAL_ASSOCIATION_MI);
+        complex.setInteractionType(interactionType);
+    }
+
+    private IntactCvTerm findCvTerm(String clazz, String id) throws CvTermNotFoundException {
+        String key = clazz + "_" + id;
+        if (cvTermMap.containsKey(key)) {
+            return cvTermMap.get(key);
+        }
+        IntactCvTerm cvTerm = intactComplexService.getCvTerm(clazz, id);
+        if (cvTerm != null) {
+            cvTermMap.put(key, cvTerm);
+            return cvTerm;
+        }
+        throw new CvTermNotFoundException("CV Term not found with class '" + clazz + "' and id '" + id + "'");
+    }
+
+    private IntactSource findSource(String id) throws SourceNotFoundException {
+        if (sourceMap.containsKey(id)) {
+            return sourceMap.get(id);
+        }
+        IntactSource source = intactComplexService.getSource(id);
+        if (source != null) {
+            sourceMap.put(id, source);
+            return source;
+        }
+        throw new SourceNotFoundException("Source not found with id '" + id + "'");
+    }
+
+    private User findUser(String username) throws UserNotFoundException {
+        if (userMap.containsKey(username)) {
+            return userMap.get(username);
+        }
+        User user = intactComplexService.geUser(username);
+        if (user != null) {
+            userMap.put(username, user);
+            return user;
+        }
+        throw new UserNotFoundException("User not found with username '" + username + "'");
+    }
+
+    private IntactOrganism findOrganism(int taxId) throws OrganismNotFoundException {
+        if (organismMap.containsKey(taxId)) {
+            return organismMap.get(taxId);
+        }
+        IntactOrganism organism = intactComplexService.getOrganism(taxId);
+        if (organism != null) {
+            organismMap.put(taxId, organism);
+            return organism;
+        }
+        throw new OrganismNotFoundException("Organism not found with tax id '" + taxId + "'");
+    }
+}

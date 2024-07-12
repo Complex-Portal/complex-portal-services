@@ -14,9 +14,15 @@
            http://www.springframework.org/schema/batch
            http://www.springframework.org/schema/batch/spring-batch-3.0.xsd">
 
-    <context:component-scan base-package="uk.ac.ebi.intact.jami" />
+    <bean class="org.springframework.retry.annotation.RetryConfiguration" />
 
+    <context:component-scan base-package="uk.ac.ebi.intact.jami" />
     <context:component-scan base-package="psidev.psi.mi.jami.batch" />
+    <context:component-scan base-package="uk.ac.ebi.complex.service" />
+
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations" value="classpath*:/META-INF/uniplex-import.properties"/>
+    </bean>
 
     <!-- basic job repository -->
     <bean id="basicBatchJobRepository"
@@ -162,9 +168,16 @@
     <bean id="complexFinder" class="uk.ac.ebi.complex.service.ComplexFinder" lazy-init="true">
         <constructor-arg index="0" ref="intactDao"/>
     </bean>
+
     <bean id="uniprotProteinFetcher" class="psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher"/>
-    <bean id="uniplexComplexManager" class="uk.ac.ebi.complex.service.UniplexComplexManager" lazy-init="true">
-        <constructor-arg index="0" ref="intactDao"/>
+
+    <bean id="intactComplexService" class="uk.ac.ebi.complex.service.service.IntactComplexService" lazy-init="true">
+        <constructor-arg index="0" ref="complexFinder"/>
+        <constructor-arg index="1" ref="intactDao"/>
+    </bean>
+
+    <bean id="uniplexComplexManager" class="uk.ac.ebi.complex.service.manager.UniplexComplexManager" lazy-init="true">
+        <constructor-arg index="0" ref="intactComplexService"/>
         <constructor-arg index="1" ref="uniprotProteinFetcher"/>
     </bean>
 
@@ -190,8 +203,10 @@
         <constructor-arg index="3" ref="uniplexClusterWriter"/>
     </bean>
     <bean id="uniplexClusterProcessor" class="uk.ac.ebi.complex.service.processor.UniplexClusterProcessor" lazy-init="true">
-        <constructor-arg index="0" ref="complexFinder"/>
+        <constructor-arg index="0" ref="intactComplexService"/>
         <constructor-arg index="1" value="${output.directory}"/>
+        <constructor-arg index="2" value="${separator}"/>
+        <constructor-arg index="3" value="${header}"/>
     </bean>
 
     <!-- writers -->
@@ -202,6 +217,9 @@
     <bean id="uniplexComplexWriter" class="uk.ac.ebi.complex.service.writer.UniplexComplexWriter" lazy-init="true">
         <constructor-arg index="0" ref="uniplexComplexManager"/>
         <constructor-arg index="1" ref="complexService"/>
+        <constructor-arg index="2" value="${output.directory}"/>
+        <constructor-arg index="3" value="${separator}"/>
+        <constructor-arg index="4" value="${header}"/>
     </bean>
 
     <!-- Import Steps -->

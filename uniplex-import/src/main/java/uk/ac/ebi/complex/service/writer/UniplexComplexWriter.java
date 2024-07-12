@@ -1,26 +1,32 @@
 package uk.ac.ebi.complex.service.writer;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.Assert;
-import uk.ac.ebi.complex.service.UniplexComplexManager;
+import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
+import uk.ac.ebi.complex.service.logging.ReportWriter;
+import uk.ac.ebi.complex.service.logging.WriteReportWriter;
+import uk.ac.ebi.complex.service.manager.UniplexComplexManager;
 import uk.ac.ebi.complex.service.model.UniplexComplex;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 import uk.ac.ebi.intact.jami.synchronizer.listener.impl.DbSynchronizerStatisticsReporter;
 
-import java.util.ArrayList;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 @RequiredArgsConstructor
 public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStream {
 
-    private static final Logger LOG = Logger.getLogger(UniplexComplexWriter.class.getName());
+    private static final Log LOG = LogFactory.getLog(UniplexComplexWriter.class);
 
     public final static String PERSIST_MAP_COUNT = "persisted.map";
     public final static String MERGE_MAP_COUNT = "merged.map";
@@ -30,11 +36,24 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
 
     private final UniplexComplexManager uniplexComplexManager;
     private final ComplexService complexService;
+    private final String reportDirectoryName;
+    private final String separator;
+    private final boolean header;
+
     private DbSynchronizerStatisticsReporter synchronizerListener;
+
+    private ReportWriter newComplexesReportWriter;
+    private ReportWriter mergedComplexesReportWriter;
+    private ErrorsReportWriter errorReportWriter;
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
+        try {
+            initialiseReportWriters();
+        } catch (IOException e) {
+            throw new ItemStreamException("Report file  writer could not be opened", e);
+        }
 
         this.synchronizerListener = new DbSynchronizerStatisticsReporter();
 
@@ -90,6 +109,13 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
+        try {
+            this.newComplexesReportWriter.flush();
+            this.mergedComplexesReportWriter.flush();
+            this.errorReportWriter.flush();
+        } catch (IOException e) {
+            throw new ItemStreamException("Report file writer could not be flushed", e);
+        }
 
         // persist statistics
         for (Map.Entry<Class,Integer> entry : this.synchronizerListener.getPersistedCounts().entrySet()){
@@ -111,6 +137,14 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
 
     @Override
     public void close() throws ItemStreamException {
+        try {
+            this.newComplexesReportWriter.close();
+            this.mergedComplexesReportWriter.close();
+            this.errorReportWriter.close();
+        } catch (IOException e) {
+            throw new ItemStreamException("Report file writer could not be closed", e);
+        }
+
         // flush statistics
         LOG.info("Created objects in database: ");
         for (Map.Entry<Class, Integer> entry : synchronizerListener.getPersistedCounts().entrySet()){
@@ -134,17 +168,61 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
 
     @Override
     public void write(List<? extends UniplexComplex> items) throws Exception {
-        List<IntactComplex> complexesToSave = new ArrayList<>();
+        Map<String, IntactComplex> complexesToSave = new HashMap<>();
         for (UniplexComplex complex: items) {
-            if (complex.getExistingComplex() != null) {
-                complexesToSave.add(uniplexComplexManager.mergeClusterWithExistingComplex(
-                        complex.getCluster(),
-                        complex.getExistingComplex()));
-            } else {
-                complexesToSave.add(uniplexComplexManager.newComplexFromCluster(complex.getCluster()));
+            try {
+                if (complex.getExistingComplex() != null) {
+                    complexesToSave.put(
+                            String.join(",", complex.getCluster().getClusterIds()),
+                            uniplexComplexManager.mergeClusterWithExistingComplex(
+                                    complex.getCluster(),
+                                    complex.getExistingComplex()));
+                } else {
+                    complexesToSave.put(
+                            String.join(",", complex.getCluster().getClusterIds()),
+                            uniplexComplexManager.newComplexFromCluster(complex.getCluster()));
+                }
+            } catch (Exception e) {
+                LOG.error("Error writing to DB uniplex clusters: " + String.join(",", complex.getCluster().getClusterIds()), e);
+                errorReportWriter.write(complex.getCluster().getClusterIds(), e.getMessage());
             }
         }
 
-        this.complexService.saveOrUpdate(complexesToSave);
+        this.complexService.saveOrUpdate(complexesToSave.values());
+
+        for (UniplexComplex complex: items) {
+            String clusterIds = String.join(",", complex.getCluster().getClusterIds());
+            if (complexesToSave.containsKey(clusterIds)) {
+                if (complex.getExistingComplex() != null) {
+                    mergedComplexesReportWriter.write(
+                            null,
+                            complex.getCluster().getClusterIds(),
+                            complex.getCluster().getClusterConfidence(),
+                            complex.getCluster().getUniprotAcs(),
+                            complexesToSave.get(clusterIds).getComplexAc());
+                } else {
+                    newComplexesReportWriter.write(
+                            null,
+                            complex.getCluster().getClusterIds(),
+                            complex.getCluster().getClusterConfidence(),
+                            complex.getCluster().getUniprotAcs(),
+                            complexesToSave.get(clusterIds).getComplexAc());
+                }
+            }
+        }
+    }
+
+    private void initialiseReportWriters() throws IOException {
+        File reportDirectory = new File(reportDirectoryName);
+        if (!reportDirectory.exists()) {
+            reportDirectory.mkdirs();
+        }
+        if (!reportDirectory.isDirectory()) {
+            throw new IOException("The reports directory has to be a directory: " + reportDirectoryName);
+        }
+
+        this.newComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "new_complexes.csv"), separator, header);
+        this.mergedComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "merged_complexes.csv"), separator, header);
+        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "write_errors.csv"), separator, header);
     }
 }

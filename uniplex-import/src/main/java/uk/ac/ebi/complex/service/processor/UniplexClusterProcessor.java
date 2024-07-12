@@ -8,11 +8,13 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
-import uk.ac.ebi.complex.service.ComplexFinder;
 import uk.ac.ebi.complex.service.ComplexFinderResult;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.model.UniplexComplex;
-import uk.ac.ebi.complex.service.writer.ReportWriter;
+import uk.ac.ebi.complex.service.service.IntactComplexService;
+import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
+import uk.ac.ebi.complex.service.logging.ProcessReportWriter;
+import uk.ac.ebi.complex.service.logging.ReportWriter;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
@@ -24,71 +26,80 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
 
     private static final Log LOG = LogFactory.getLog(UniplexClusterProcessor.class);
 
-    private final ComplexFinder complexFinder;
+    private final IntactComplexService intactComplexService;
     private final String reportDirectoryName;
+    private final String separator;
+    private final boolean header;
 
     private ReportWriter exactMatchesReportWriter;
     private ReportWriter multipleExactMatchesReportWriter;
     private ReportWriter partialMatchesReportWriter;
     private ReportWriter noMatchesReportWriter;
+    private ErrorsReportWriter errorReportWriter;
 
     @Override
     public UniplexComplex process(UniplexCluster item) throws Exception {
-        ComplexFinderResult<IntactComplex> complexFinderResult = this.complexFinder
-                .findComplexWithMatchingProteins(item.getUniprotAcs());
+        try {
+            ComplexFinderResult<IntactComplex> complexFinderResult = intactComplexService
+                    .findComplexWithMatchingProteins(item.getUniprotAcs());
 
-        if (!complexFinderResult.getExactMatches().isEmpty()) {
-            if (complexFinderResult.getExactMatches().size() > 1) {
-                for (ComplexFinderResult.ExactMatch<IntactComplex> complexMatch: complexFinderResult.getExactMatches()) {
-                    multipleExactMatchesReportWriter.write(
+            if (!complexFinderResult.getExactMatches().isEmpty()) {
+                if (complexFinderResult.getExactMatches().size() > 1) {
+                    for (ComplexFinderResult.ExactMatch<IntactComplex> complexMatch : complexFinderResult.getExactMatches()) {
+                        multipleExactMatchesReportWriter.write(
+                                complexMatch.getMatchType(),
+                                item.getClusterIds(),
+                                item.getClusterConfidence(),
+                                item.getUniprotAcs(),
+                                complexMatch.getComplexAc());
+                    }
+                    LOG.warn("Clusters " +
+                            String.join(",", item.getClusterIds()) +
+                            "matched exactly to multiple complexes: " +
+                            complexFinderResult.getExactMatches()
+                                    .stream()
+                                    .map(ComplexFinderResult.ExactMatch::getComplexAc)
+                                    .collect(Collectors.joining(",")));
+                } else {
+                    ComplexFinderResult.ExactMatch<IntactComplex> complexMatch = complexFinderResult.getExactMatches().iterator().next();
+                    exactMatchesReportWriter.write(
                             complexMatch.getMatchType(),
                             item.getClusterIds(),
                             item.getClusterConfidence(),
                             item.getUniprotAcs(),
                             complexMatch.getComplexAc());
+                    return new UniplexComplex(item, complexMatch.getComplex());
                 }
-                LOG.warn("Clusters " +
-                        String.join(",", item.getClusterIds()) +
-                        "matched exactly to multiple complexes: " +
-                        complexFinderResult.getExactMatches()
-                                .stream()
-                                .map(ComplexFinderResult.ExactMatch::getComplexAc)
-                                .collect(Collectors.joining(",")));
-                return null;
             } else {
-                ComplexFinderResult.ExactMatch<IntactComplex> complexMatch = complexFinderResult.getExactMatches().iterator().next();
-                exactMatchesReportWriter.write(
-                        complexMatch.getMatchType(),
-                        item.getClusterIds(),
-                        item.getClusterConfidence(),
-                        item.getUniprotAcs(),
-                        complexMatch.getComplexAc());
-                return new UniplexComplex(item, complexMatch.getComplex());
+                if (!complexFinderResult.getPartialMatches().isEmpty()) {
+                    for (ComplexFinderResult.PartialMatch<IntactComplex> complexMatch : complexFinderResult.getPartialMatches()) {
+                        partialMatchesReportWriter.write(
+                                complexMatch.getMatchType(),
+                                item.getClusterIds(),
+                                item.getClusterConfidence(),
+                                item.getUniprotAcs(),
+                                complexMatch.getComplexAc());
+                    }
+                } else {
+                    noMatchesReportWriter.write(
+                            item.getClusterIds(),
+                            item.getClusterConfidence(),
+                            item.getUniprotAcs());
+                }
+                return new UniplexComplex(item, null);
             }
-        } else if (!complexFinderResult.getPartialMatches().isEmpty()) {
-            for (ComplexFinderResult.PartialMatch<IntactComplex> complexMatch: complexFinderResult.getPartialMatches()) {
-                partialMatchesReportWriter.write(
-                        complexMatch.getMatchType(),
-                        item.getClusterIds(),
-                        item.getClusterConfidence(),
-                        item.getUniprotAcs(),
-                        complexMatch.getComplexAc());
-            }
-        } else {
-            noMatchesReportWriter.write(
-                    item.getClusterIds(),
-                    item.getClusterConfidence(),
-                    item.getUniprotAcs());
+        } catch (Exception e) {
+            LOG.error("Error finding complex matches for uniplex clusters: " + String.join(",", item.getClusterIds()), e);
+            errorReportWriter.write(item.getClusterIds(), e.getMessage());
         }
-
-        return new UniplexComplex(item, null);
+        return null;
     }
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
         try {
-            this.initialiseReportWriters();
+            initialiseReportWriters();
         } catch (IOException e) {
             throw new ItemStreamException("Report file  writer could not be opened", e);
         }
@@ -102,6 +113,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
             this.multipleExactMatchesReportWriter.flush();
             this.partialMatchesReportWriter.flush();
             this.noMatchesReportWriter.flush();
+            this.errorReportWriter.flush();
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be flushed", e);
         }
@@ -114,6 +126,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
             this.multipleExactMatchesReportWriter.close();
             this.partialMatchesReportWriter.close();
             this.noMatchesReportWriter.close();
+            this.errorReportWriter.close();
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be closed", e);
         }
@@ -128,9 +141,10 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
             throw new IOException("The reports directory has to be a directory: " + reportDirectoryName);
         }
 
-        this.exactMatchesReportWriter = new ReportWriter(new File(reportDirectory, "exact_matches.csv"), ",", true);
-        this.multipleExactMatchesReportWriter = new ReportWriter(new File(reportDirectory, "multiple_exact_matches.csv"), ",", true);
-        this.partialMatchesReportWriter = new ReportWriter(new File(reportDirectory, "partial_matches.csv"), ",", true);
-        this.noMatchesReportWriter = new ReportWriter(new File(reportDirectory, "no_matches.csv"), ",", true);
+        this.exactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "exact_matches.csv"), separator, header);
+        this.multipleExactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "multiple_exact_matches.csv"), separator, header);
+        this.partialMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "partial_matches.csv"), separator, header);
+        this.noMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "no_matches.csv"), separator, header);
+        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "process_errors.csv"), separator, header);
     }
 }
