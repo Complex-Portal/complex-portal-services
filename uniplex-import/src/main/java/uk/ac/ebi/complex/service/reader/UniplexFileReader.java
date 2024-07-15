@@ -38,6 +38,7 @@ public class UniplexFileReader implements ItemReader<UniplexCluster>, ItemStream
         Assert.notNull(executionContext, "ExecutionContext must not be null");
 
         try {
+            // TODO: should we have a filter on the confidence score?
             Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFileName);
             this.clusterIterator = clusters.iterator();
 
