@@ -7,6 +7,7 @@ import psidev.psi.mi.jami.utils.comparator.CollectionComparator;
 import psidev.psi.mi.jami.utils.comparator.participant.ModelledComparableParticipantComparator;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
+import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleStatus;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,10 +17,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ComplexFinder {
-
-    // TODO: agree on these numbers
-    private static final int MAX_NUMBER_OF_DIFFERENT_PROTEINS_FOR_PARTIAL_MATCHES = 1;
-    private static final int MIN_NUMBER_OF_MATCHING_PROTEINS_FOR_PARTIAL_MATCHES = 2;
 
     private final IntactDao intactDao;
     private final CollectionComparator<ModelledComparableParticipant> comparableParticipantsComparator;
@@ -58,44 +55,49 @@ public class ComplexFinder {
             Map<String, ComplexFinderResult.ExactMatch<IntactComplex>> exactMatches,
             Map<String, ComplexFinderResult.PartialMatch<IntactComplex>> partialMatches) {
 
-        // First we check we haven't already found a match for this complex
-        if (!exactMatches.containsKey(complex.getComplexAc()) && !partialMatches.containsKey(complex.getComplexAc())) {
-            Collection<ModelledComparableParticipant> complexProteins = complex.getComparableParticipants();
+        // We only consider complexes released or ready for release
+        if (complex.getStatus().equals(LifeCycleStatus.RELEASED) ||
+                complex.getStatus().equals(LifeCycleStatus.READY_FOR_RELEASE)) {
 
-            // First we search for exact matches
-            ComplexFinderResult.ExactMatch<IntactComplex> exactMatch = findExactMatch(complex, complexProteins, proteins);
-            ComplexFinderResult.PartialMatch<IntactComplex> partialMatch = null;
-            if (exactMatch == null) {
-                // If no exact matches, we look for partial matches
-                partialMatch = findPartialMatch(complex, complexProteins, proteins);
-            }
+            // First we check we haven't already found a match for this complex
+            if (!exactMatches.containsKey(complex.getComplexAc()) && !partialMatches.containsKey(complex.getComplexAc())) {
+                Collection<ModelledComparableParticipant> curatedComplexProteins = complex.getComparableParticipants();
 
-            if (exactMatch != null) {
-                // If there is an exact match, we add it to the results
-                exactMatches.put(complex.getComplexAc(), exactMatch);
-
-                // We also check if it is used as a sub-complex in any other complex,
-                // and we check for matches on those super-complexes
-                Collection<IntactComplex> complexesWithMatchComplexAsSubComplex =
-                        this.intactDao.getComplexDao().getComplexesInvolvingSubComplex(complex.getComplexAc());
-
-                for (IntactComplex complexB : complexesWithMatchComplexAsSubComplex) {
-                    findComplexMatches(complexB, proteins, exactMatches, partialMatches);
+                // First we search for exact matches
+                ComplexFinderResult.ExactMatch<IntactComplex> exactMatch = findExactMatch(complex, curatedComplexProteins, proteins);
+                ComplexFinderResult.PartialMatch<IntactComplex> partialMatch = null;
+                if (exactMatch == null) {
+                    // If no exact matches, we look for partial matches
+                    partialMatch = findPartialMatch(complex, curatedComplexProteins, proteins);
                 }
-            }
 
-            if (partialMatch != null) {
-                // If there is a partial match, we add it to the results
-                partialMatches.put(complex.getComplexAc(), partialMatch);
+                if (exactMatch != null) {
+                    // If there is an exact match, we add it to the results
+                    exactMatches.put(complex.getComplexAc(), exactMatch);
 
-                // If the matching complex does not have extra proteins, we check if it is used
-                // as a sub-complex in any other complex, and we check for matches on those super-complexes
-                if (partialMatch.getMatchType().equals(ComplexFinderResult.MatchType.PARTIAL_MATCH_MISSING_COMPONENTS)) {
+                    // We also check if it is used as a sub-complex in any other complex,
+                    // and we check for matches on those super-complexes
                     Collection<IntactComplex> complexesWithMatchComplexAsSubComplex =
                             this.intactDao.getComplexDao().getComplexesInvolvingSubComplex(complex.getComplexAc());
 
                     for (IntactComplex complexB : complexesWithMatchComplexAsSubComplex) {
                         findComplexMatches(complexB, proteins, exactMatches, partialMatches);
+                    }
+                }
+
+                if (partialMatch != null) {
+                    // If there is a partial match, we add it to the results
+                    partialMatches.put(complex.getComplexAc(), partialMatch);
+
+                    // If the matching complex does not have extra proteins, we check if it is used
+                    // as a sub-complex in any other complex, and we check for matches on those super-complexes
+                    if (partialMatch.getMatchType().equals(ComplexFinderResult.MatchType.PARTIAL_MATCH_PROTEINS_MISSING_IN_COMPLEX)) {
+                        Collection<IntactComplex> complexesWithMatchComplexAsSubComplex =
+                                this.intactDao.getComplexDao().getComplexesInvolvingSubComplex(complex.getComplexAc());
+
+                        for (IntactComplex complexB : complexesWithMatchComplexAsSubComplex) {
+                            findComplexMatches(complexB, proteins, exactMatches, partialMatches);
+                        }
                     }
                 }
             }
@@ -104,10 +106,10 @@ public class ComplexFinder {
 
     private ComplexFinderResult.ExactMatch<IntactComplex> findExactMatch(
             IntactComplex complex,
-            Collection<ModelledComparableParticipant> complexProteins,
+            Collection<ModelledComparableParticipant> curatedComplexProteins,
             Collection<ModelledComparableParticipant> proteins) {
 
-        if (this.comparableParticipantsComparator.compare(complexProteins, proteins) == 0) {
+        if (this.comparableParticipantsComparator.compare(curatedComplexProteins, proteins) == 0) {
             // Exact match at protein level
             return new ComplexFinderResult.ExactMatch<>(
                     complex.getComplexAc(),
@@ -119,37 +121,32 @@ public class ComplexFinder {
 
     private ComplexFinderResult.PartialMatch<IntactComplex> findPartialMatch(
             IntactComplex complex,
-            Collection<ModelledComparableParticipant> complexProteins,
+            Collection<ModelledComparableParticipant> curatedComplexProteins,
             Collection<ModelledComparableParticipant> proteins) {
 
         List<String> matchingProteins = new ArrayList<>();
-        List<String> extraProteins = new ArrayList<>();
+        List<String> proteinMissingInComplex = new ArrayList<>();
 
-        for (ModelledComparableParticipant complexComponent: complexProteins) {
-            if (proteins.stream().anyMatch(protein -> protein.getInteractorId().equals(complexComponent.getInteractorId()))) {
-                matchingProteins.add(complexComponent.getInteractorId());
+        for (ModelledComparableParticipant protein: proteins) {
+            if (curatedComplexProteins.stream().anyMatch(complexProtein -> complexProtein.getInteractorId().equals(protein.getInteractorId()))) {
+                matchingProteins.add(protein.getInteractorId());
             } else {
-                extraProteins.add(complexComponent.getInteractorId());
+                proteinMissingInComplex.add(protein.getInteractorId());
             }
         }
         if (!matchingProteins.isEmpty()) {
-            List<String> missingProteins = proteins.stream()
+            List<String> extraProteinsInComplex = curatedComplexProteins.stream()
                     .map(ModelledComparableParticipant::getInteractorId)
-                    .filter(proteinAc -> complexProteins.stream().noneMatch(component -> proteinAc.equals(component.getInteractorId())))
+                    .filter(proteinId -> proteins.stream().noneMatch(protein -> proteinId.equals(protein.getInteractorId())))
                     .collect(Collectors.toList());
 
-            // We only consider matching proteins that have at least a certain number of proteins in common
-            // with the cluster, and no more than a certain number of proteins different.
-            if (matchingProteins.size() >= MIN_NUMBER_OF_MATCHING_PROTEINS_FOR_PARTIAL_MATCHES &&
-                    (extraProteins.size() + missingProteins.size()) <= MAX_NUMBER_OF_DIFFERENT_PROTEINS_FOR_PARTIAL_MATCHES) {
-                return new ComplexFinderResult.PartialMatch<>(
-                        complex.getComplexAc(),
-                        getPartialMatchType(matchingProteins, extraProteins, missingProteins),
-                        matchingProteins,
-                        extraProteins,
-                        missingProteins,
-                        complex);
-            }
+            return new ComplexFinderResult.PartialMatch<>(
+                    complex.getComplexAc(),
+                    getPartialMatchType(matchingProteins, proteinMissingInComplex, extraProteinsInComplex),
+                    matchingProteins,
+                    extraProteinsInComplex,
+                    proteinMissingInComplex,
+                    complex);
         }
         return null;
     }
@@ -165,22 +162,22 @@ public class ComplexFinder {
 
     private ComplexFinderResult.MatchType getPartialMatchType(
             List<String> matchingProteins,
-            List<String> extraProteins,
-            List<String> missingProteins) {
+            List<String> proteinMissingInComplex,
+            List<String> extraProteinsInComplex) {
 
         if (!matchingProteins.isEmpty()) {
-            if (extraProteins.isEmpty()) {
-                if (missingProteins.isEmpty()) {
+            if (proteinMissingInComplex.isEmpty()) {
+                if (extraProteinsInComplex.isEmpty()) {
                     // This should had been an exact match
                     throw new RuntimeException("Unexpected exact match");
                 } else {
-                    return ComplexFinderResult.MatchType.PARTIAL_MATCH_MISSING_COMPONENTS;
+                    return ComplexFinderResult.MatchType.PARTIAL_MATCH_SUBSET_OF_COMPLEX;
                 }
             } else {
-                if (missingProteins.isEmpty()) {
-                    return ComplexFinderResult.MatchType.PARTIAL_MATCH_EXTRA_COMPONENTS;
+                if (extraProteinsInComplex.isEmpty()) {
+                    return ComplexFinderResult.MatchType.PARTIAL_MATCH_PROTEINS_MISSING_IN_COMPLEX;
                 } else {
-                    return ComplexFinderResult.MatchType.PARTIAL_MATCH_MISSING_AND_EXTRA_COMPONENTS;
+                    return ComplexFinderResult.MatchType.PARTIAL_MATCH_OTHER;
                 }
             }
         }

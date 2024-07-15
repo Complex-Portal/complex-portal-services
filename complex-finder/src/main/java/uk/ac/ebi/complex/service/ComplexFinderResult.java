@@ -21,9 +21,9 @@ public class ComplexFinderResult<T> {
     public enum MatchType {
         EXACT_MATCH,
         EXACT_MATCH_AT_PROTEIN_LEVEL,
-        PARTIAL_MATCH_MISSING_COMPONENTS,
-        PARTIAL_MATCH_EXTRA_COMPONENTS,
-        PARTIAL_MATCH_MISSING_AND_EXTRA_COMPONENTS
+        PARTIAL_MATCH_SUBSET_OF_COMPLEX,
+        PARTIAL_MATCH_PROTEINS_MISSING_IN_COMPLEX,
+        PARTIAL_MATCH_OTHER
     }
 
     @AllArgsConstructor
@@ -46,8 +46,8 @@ public class ComplexFinderResult<T> {
         private String complexAc;
         private MatchType matchType;
         private Collection<String> matchingProteins;
-        private Collection<String> extraProteins;
-        private Collection<String> missingProteins;
+        private Collection<String> extraProteinsInComplex;
+        private Collection<String> proteinMissingInComplex;
         private T complex;
     }
 }
