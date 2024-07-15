@@ -1,6 +1,8 @@
 package uk.ac.ebi.complex.service.manager;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import psidev.psi.mi.jami.bridges.exception.BridgeFailedException;
 import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
 import psidev.psi.mi.jami.model.Alias;
@@ -14,7 +16,6 @@ import uk.ac.ebi.complex.service.exception.SourceNotFoundException;
 import uk.ac.ebi.complex.service.exception.UserNotFoundException;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.service.IntactComplexService;
-import uk.ac.ebi.intact.jami.model.extension.ComplexHumapXref;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.model.extension.IntactCvTerm;
 import uk.ac.ebi.intact.jami.model.extension.IntactModelledParticipant;
@@ -42,17 +43,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UniplexComplexManager {
 
+    private static final Log LOG = LogFactory.getLog(UniplexComplexManager.class);
+
     private static final String STABLE_COMPLEX_MI = "MI:1302";
     private static final String PHYSICAL_ASSOCIATION_MI = "MI:0915";
     private static final String GENE_NAME_MI = "MI:0301";
     private static final Integer HUMAN_TAX_ID = 9606;
+    private static final String READY_FOR_RELEASE_COMPLEX_PUBMED_ID = "14681455";
 
     // TODO: replace the following ids with MI ids when these terms are created in OLS and imported in the DB
     private final static String CONFIDENCE_TOPIC_ID = "IA:3600";
     private final static String HUMAP_DATABASE_ID = "IA:3601";
-    private final static String CLUSTER_ID_QUALIFIER_ID = "IA:3602";
     // TODO: should be ECO:0008004, but it's not yet created in the DB
     private static final String ML_ECO_CODE = "IA:3603";
+    // TODO: replace with the actual institution id when it is agreed and created
+    private final static String HUMAP_INSTITUION_ID = "IA:3601";
 
     // TODO: this needs to be updated to an agreed creator, or we should take it as an input parameter to the job
     private static final String CREATOR_USERNAME = "jmedina";
@@ -77,7 +82,6 @@ public class UniplexComplexManager {
             SourceNotFoundException, CvTermNotFoundException, ProteinException, UserNotFoundException,
             OrganismNotFoundException {
 
-        // TODO: what whould the short name be? Using cluster id for now
         IntactComplex complex = new IntactComplex(uniplexCluster.getClusterIds().iterator().next());
         setComplexAc(complex);
         setOrganism(complex);
@@ -90,25 +94,29 @@ public class UniplexComplexManager {
         // Systematic name is set after the components to have access to the gene names of the proteins
         setComplexSystematicName(complex);
         setComplexStatus(complex);
+        setExperimentAndPublication(complex);
         complex.setCreatedDate(new Date());
         complex.setUpdatedDate(complex.getCreatedDate());
-
-        // TODO: do we want some description or function?
 
         // TODO: update this when we have an actual flag or something
         complex.setManuallyCurated(false);
 
-        // TODO: do these complexes need to be linked to any experiment?
-        //  Curated complexes are linked to experiments and it has something to do with releases
-
         return complex;
     }
 
+    private void setExperimentAndPublication(IntactComplex complex) {
+        IntactUtils.createAndAddDefaultExperimentForComplexes(complex, READY_FOR_RELEASE_COMPLEX_PUBMED_ID);
+    }
+
     private void setOrganism(IntactComplex complex) throws OrganismNotFoundException {
+        // Currently we are only importing human complexes.
+        // If we want to add support for other organisms, we need to update this.
         complex.setOrganism(findOrganism(HUMAN_TAX_ID));
     }
 
     private void setComplexEvidenceType(IntactComplex complex) throws CvTermNotFoundException {
+        // At the moment we are using ECO code ECO:0008004.
+        // Later on we need to add support for ECO:0007653, when we import data also from ProteomeHD
         IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
         complex.setEvidenceType(evidenceType);
     }
@@ -158,20 +166,21 @@ public class UniplexComplexManager {
 
     private void addHumapXrefs(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
         for (String clusterId: uniplexCluster.getClusterIds()) {
-            ComplexHumapXref xref = newHumapXref(clusterId);
-            complex.getXrefs().add(xref);
+            InteractorXref xref = newHumapXref(clusterId);
+            // We add the new xrefs to identifiers as we are using the identity qualifier.
+            // If we eventually use another qualifier, we should add them to xrefs.
+            complex.getIdentifiers().add(xref);
         }
     }
 
-    private ComplexHumapXref newHumapXref(String id) throws CvTermNotFoundException {
+    private InteractorXref newHumapXref(String id) throws CvTermNotFoundException {
         IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, HUMAP_DATABASE_ID);
-        IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, CLUSTER_ID_QUALIFIER_ID);
-        // TODO: in future versions we may need to increase the version
+        // Currently we use identity as qualifier, as we are only importing exact matches.
+        // If we merge curated complexes with partial matches, we need to add a different qualifier (subset, see-also, etc.).
+        IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
+        // In future versions we may need to increase the version
         String version = "1";
-        ComplexHumapXref xref = new ComplexHumapXref(database, id, version, qualifier);
-        IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
-        xref.setEvidenceType(evidenceType);
-        return xref;
+        return new InteractorXref(database, id, version, qualifier);
     }
 
     private void addConfidenceAnnotation(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
@@ -182,7 +191,7 @@ public class UniplexComplexManager {
     private void setComplexAc(IntactComplex complex) throws CvTermNotFoundException {
         IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, Xref.COMPLEX_PORTAL_MI);
         IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.COMPLEX_PRIMARY_MI);
-        // TODO: in future versions we may need to increase the version
+        // In future versions we may need to increase the version
         String version = "1";
         String acValue = intactComplexService.getNextComplexAc();
         InteractorXref xref = new InteractorXref(database, acValue, version, qualifier);
@@ -200,13 +209,15 @@ public class UniplexComplexManager {
                         .findFirst())
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .collect(Collectors.joining("_"));
+                .collect(Collectors.joining(":"));
 
         if (geneNamesConcatenated.isEmpty()) {
             // TODO: what to do if we have no gene names?
+            LOG.warn("Systematic name could not be generated for complex " + complex.getComplexAc() + ", using cluster Id");
             complex.setSystematicName(complex.getShortName());
         } else if (geneNamesConcatenated.length() > IntactUtils.MAX_ALIAS_NAME_LEN) {
             // TODO: MAX_ALIAS_NAME_LEN is 4000, do we want a more reasonable limit?
+            LOG.warn("Systematic name too long for complex " + complex.getComplexAc());
             complex.setSystematicName(geneNamesConcatenated.substring(0, IntactUtils.MAX_ALIAS_NAME_LEN));
         } else {
             complex.setSystematicName(geneNamesConcatenated);
@@ -214,7 +225,9 @@ public class UniplexComplexManager {
     }
 
     private void setComplexSource(IntactComplex complex) throws SourceNotFoundException {
-        IntactSource source = findSource(HUMAP_DATABASE_ID);
+        // At the moment we are only importing huMAP clusters.
+        // When we also import ProteomeHD data, we need to review this.
+        IntactSource source = findSource(HUMAP_INSTITUION_ID);
         complex.setSource(source);
     }
 
