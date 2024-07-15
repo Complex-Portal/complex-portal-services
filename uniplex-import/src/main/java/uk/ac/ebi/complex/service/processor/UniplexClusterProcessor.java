@@ -19,6 +19,7 @@ import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -60,6 +61,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                                     .stream()
                                     .map(ComplexFinderResult.ExactMatch::getComplexAc)
                                     .collect(Collectors.joining(",")));
+                    return null;
                 } else {
                     ComplexFinderResult.ExactMatch<IntactComplex> complexMatch = complexFinderResult.getExactMatches().iterator().next();
                     exactMatchesReportWriter.write(
@@ -71,8 +73,13 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                     return new UniplexComplex(item, complexMatch.getComplex());
                 }
             } else {
-                if (!complexFinderResult.getPartialMatches().isEmpty()) {
-                    for (ComplexFinderResult.PartialMatch<IntactComplex> complexMatch : complexFinderResult.getPartialMatches()) {
+                // At the moment we only consider partial matches where the predicted complex is a subset of a curated complex.
+                List<ComplexFinderResult.PartialMatch<IntactComplex>> subsetMatches = complexFinderResult.getPartialMatches()
+                        .stream()
+                        .filter(match -> ComplexFinderResult.MatchType.PARTIAL_MATCH_SUBSET_OF_COMPLEX.equals(match.getMatchType()))
+                        .collect(Collectors.toList());
+                if (!subsetMatches.isEmpty()) {
+                    for (ComplexFinderResult.PartialMatch<IntactComplex> complexMatch : subsetMatches) {
                         partialMatchesReportWriter.write(
                                 complexMatch.getMatchType(),
                                 item.getClusterIds(),
@@ -91,8 +98,8 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
         } catch (Exception e) {
             LOG.error("Error finding complex matches for uniplex clusters: " + String.join(",", item.getClusterIds()), e);
             errorReportWriter.write(item.getClusterIds(), e.getMessage());
+            return null;
         }
-        return null;
     }
 
     @Override
