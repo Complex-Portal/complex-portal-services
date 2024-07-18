@@ -56,7 +56,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                     }
                     LOG.warn("Clusters " +
                             String.join(",", item.getClusterIds()) +
-                            "matched exactly to multiple complexes: " +
+                            " matched exactly to multiple complexes: " +
                             complexFinderResult.getExactMatches()
                                     .stream()
                                     .map(ComplexFinderResult.ExactMatch::getComplexAc)

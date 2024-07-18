@@ -2,11 +2,13 @@ package uk.ac.ebi.complex.service;
 
 import psidev.psi.mi.jami.model.ModelledComparableParticipant;
 import psidev.psi.mi.jami.model.Protein;
+import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.utils.CvTermUtils;
 import psidev.psi.mi.jami.utils.comparator.CollectionComparator;
 import psidev.psi.mi.jami.utils.comparator.participant.ModelledComparableParticipantComparator;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
+import uk.ac.ebi.intact.jami.model.extension.IntactProtein;
 import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleStatus;
 
 import java.util.ArrayList;
@@ -29,29 +31,31 @@ public class ComplexFinder {
         this.comparableParticipantsComparator = new CollectionComparator<>(participantComparator);
     }
 
-    public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteins(Collection<String> proteinAcs) {
-        Collection<IntactComplex> complexes = this.intactDao.getComplexDao().getComplexesInvolvingProteins(proteinAcs);
+    public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteins(Collection<String> proteinIds) {
+        Collection<IntactComplex> complexes = getComplexesInvolvingProteins(proteinIds);
 
-        Collection<ModelledComparableParticipant> proteins = proteinAcs.stream()
-                .map(proteinAc -> new ModelledComparableParticipant(proteinAc, 1, CvTermUtils.createProteinInteractorType()))
+        Collection<ModelledComparableParticipant> proteins = proteinIds.stream()
+                .map(proteinId -> new ModelledComparableParticipant(proteinId, 1, CvTermUtils.createProteinInteractorType()))
                 .collect(Collectors.toList());
 
+        Map<String, IntactProtein> proteinCacheMap = new HashMap<>();
         Map<String, ComplexFinderResult.ExactMatch<IntactComplex>> exactMatchesMap = new HashMap<>();
         Map<String, ComplexFinderResult.PartialMatch<IntactComplex>> partialMatchesMap = new HashMap<>();
 
-        for (IntactComplex complex: complexes) {
-            findComplexMatches(complex, proteins, exactMatchesMap, partialMatchesMap);
+        for (IntactComplex complex : complexes) {
+            findComplexMatches(complex, proteins, proteinCacheMap, exactMatchesMap, partialMatchesMap);
         }
 
         List<ComplexFinderResult.ExactMatch<IntactComplex>> exactMatches = new ArrayList<>(exactMatchesMap.values());
         List<ComplexFinderResult.PartialMatch<IntactComplex>> partialMatches = new ArrayList<>(partialMatchesMap.values());
 
-        return new ComplexFinderResult<>(proteinAcs, exactMatches, partialMatches);
+        return new ComplexFinderResult<>(proteinIds, exactMatches, partialMatches);
     }
 
     private void findComplexMatches(
             IntactComplex complex,
             Collection<ModelledComparableParticipant> proteins,
+            Map<String, IntactProtein> proteinCacheMap,
             Map<String, ComplexFinderResult.ExactMatch<IntactComplex>> exactMatches,
             Map<String, ComplexFinderResult.PartialMatch<IntactComplex>> partialMatches) {
 
@@ -61,7 +65,7 @@ public class ComplexFinder {
 
             // First we check we haven't already found a match for this complex
             if (!exactMatches.containsKey(complex.getComplexAc()) && !partialMatches.containsKey(complex.getComplexAc())) {
-                Collection<ModelledComparableParticipant> curatedComplexProteins = complex.getComparableParticipants();
+                Collection<ModelledComparableParticipant> curatedComplexProteins = getProteinComponents(complex, proteinCacheMap);
 
                 // First we search for exact matches
                 ComplexFinderResult.ExactMatch<IntactComplex> exactMatch = findExactMatch(complex, curatedComplexProteins, proteins);
@@ -81,7 +85,7 @@ public class ComplexFinder {
                             this.intactDao.getComplexDao().getComplexesInvolvingSubComplex(complex.getComplexAc());
 
                     for (IntactComplex complexB : complexesWithMatchComplexAsSubComplex) {
-                        findComplexMatches(complexB, proteins, exactMatches, partialMatches);
+                        findComplexMatches(complexB, proteins, proteinCacheMap, exactMatches, partialMatches);
                     }
                 }
 
@@ -96,7 +100,7 @@ public class ComplexFinder {
                                 this.intactDao.getComplexDao().getComplexesInvolvingSubComplex(complex.getComplexAc());
 
                         for (IntactComplex complexB : complexesWithMatchComplexAsSubComplex) {
-                            findComplexMatches(complexB, proteins, exactMatches, partialMatches);
+                            findComplexMatches(complexB, proteins, proteinCacheMap, exactMatches, partialMatches);
                         }
                     }
                 }
@@ -184,10 +188,32 @@ public class ComplexFinder {
         return null;
     }
 
+    private Collection<ModelledComparableParticipant> getProteinComponents(
+            IntactComplex complex,
+            Map<String, IntactProtein> proteinCacheMap) {
+
+        return complex.getComparableParticipants(
+                true,
+                proteinAc -> {
+                    if (!proteinCacheMap.containsKey(proteinAc)) {
+                        IntactProtein protein = intactDao.getProteinDao().getByAc(proteinAc);
+                        proteinCacheMap.put(proteinAc, protein);
+                    }
+                    return proteinCacheMap.get(proteinAc);
+                }
+        );
+    }
+
     private Collection<ModelledComparableParticipant> getNotProteinComponents(IntactComplex complex) {
         return complex.getAllExpandedParticipants()
                 .stream()
                 .filter(component -> !Protein.PROTEIN_MI.equals(component.getInteractorType().getMIIdentifier()))
                 .collect(Collectors.toList());
+    }
+
+    private Collection<IntactComplex> getComplexesInvolvingProteins(Collection<String> proteinIds) {
+        Collection<IntactProtein> proteins = this.intactDao.getProteinDao().getByCanonicalIds(Xref.UNIPROTKB_MI, proteinIds);
+        Collection<String> proteinAcs = proteins.stream().map(IntactProtein::getAc).collect(Collectors.toList());
+        return this.intactDao.getComplexDao().getComplexesInvolvingProteinsWithEbiAcs(proteinAcs);
     }
 }

@@ -48,11 +48,11 @@ public class UniplexComplexManager {
     private static final String STABLE_COMPLEX_MI = "MI:1302";
     private static final String PHYSICAL_ASSOCIATION_MI = "MI:0915";
     private static final String GENE_NAME_MI = "MI:0301";
+    private final static String AUTHOR_CONFIDENCE_TOPIC_ID = "MI:0621";
     private static final Integer HUMAN_TAX_ID = 9606;
     private static final String READY_FOR_RELEASE_COMPLEX_PUBMED_ID = "14681455";
 
     // TODO: replace the following ids with MI ids when these terms are created in OLS and imported in the DB
-    private final static String CONFIDENCE_TOPIC_ID = "IA:3600";
     private final static String HUMAP_DATABASE_ID = "IA:3601";
     // TODO: should be ECO:0008004, but it's not yet created in the DB
     private static final String ML_ECO_CODE = "IA:3603";
@@ -95,11 +95,9 @@ public class UniplexComplexManager {
         setComplexSystematicName(complex);
         setComplexStatus(complex);
         setExperimentAndPublication(complex);
+        complex.setPredictedComplex(true);
         complex.setCreatedDate(new Date());
         complex.setUpdatedDate(complex.getCreatedDate());
-
-        // TODO: update this when we have an actual flag or something
-        complex.setManuallyCurated(false);
 
         return complex;
     }
@@ -129,7 +127,7 @@ public class UniplexComplexManager {
         complex.getLifecycleEvents().add(
                 new ComplexLifeCycleEvent(LifeCycleEventType.CREATED, user, "New predicted complex"));
         complex.getLifecycleEvents().add(
-                new ComplexLifeCycleEvent(LifeCycleEventType.READY_FOR_RELEASE, user, "Predicted complex read for release"));
+                new ComplexLifeCycleEvent(LifeCycleEventType.READY_FOR_RELEASE, user, "Predicted complex ready for release"));
         complex.setStatus(LifeCycleStatus.READY_FOR_RELEASE);
     }
 
@@ -178,13 +176,11 @@ public class UniplexComplexManager {
         // Currently we use identity as qualifier, as we are only importing exact matches.
         // If we merge curated complexes with partial matches, we need to add a different qualifier (subset, see-also, etc.).
         IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
-        // In future versions we may need to increase the version
-        String version = "1";
-        return new InteractorXref(database, id, version, qualifier);
+        return new InteractorXref(database, id, qualifier);
     }
 
     private void addConfidenceAnnotation(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
-        IntactCvTerm topic = findCvTerm(IntactUtils.TOPIC_OBJCLASS, CONFIDENCE_TOPIC_ID);
+        IntactCvTerm topic = findCvTerm(IntactUtils.TOPIC_OBJCLASS, AUTHOR_CONFIDENCE_TOPIC_ID);
         complex.getAnnotations().add(new InteractorAnnotation(topic, uniplexCluster.getClusterConfidence().toString()));
     }
 
