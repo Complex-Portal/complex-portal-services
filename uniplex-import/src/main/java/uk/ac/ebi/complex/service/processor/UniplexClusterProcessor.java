@@ -1,6 +1,7 @@
 package uk.ac.ebi.complex.service.processor;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.item.ExecutionContext;
@@ -9,12 +10,13 @@ import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
 import uk.ac.ebi.complex.service.ComplexFinderResult;
-import uk.ac.ebi.complex.service.model.UniplexCluster;
-import uk.ac.ebi.complex.service.model.UniplexComplex;
-import uk.ac.ebi.complex.service.service.IntactComplexService;
+import uk.ac.ebi.complex.service.config.ComplexServiceConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.ProcessReportWriter;
 import uk.ac.ebi.complex.service.logging.ReportWriter;
+import uk.ac.ebi.complex.service.model.UniplexCluster;
+import uk.ac.ebi.complex.service.model.UniplexComplex;
+import uk.ac.ebi.complex.service.service.IntactComplexService;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
@@ -22,15 +24,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RequiredArgsConstructor
+@Data
+@NoArgsConstructor
 public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, UniplexComplex>, ItemStream {
 
     private static final Log LOG = LogFactory.getLog(UniplexClusterProcessor.class);
 
-    private final IntactComplexService intactComplexService;
-    private final String reportDirectoryName;
-    private final String separator;
-    private final boolean header;
+    private IntactComplexService intactComplexService;
+    private ComplexServiceConfiguration config;
 
     private ReportWriter exactMatchesReportWriter;
     private ReportWriter multipleExactMatchesReportWriter;
@@ -140,18 +141,20 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
     }
 
     private void initialiseReportWriters() throws IOException {
-        File reportDirectory = new File(reportDirectoryName);
+        File reportDirectory = new File(config.getReportDirectory());
         if (!reportDirectory.exists()) {
             reportDirectory.mkdirs();
         }
         if (!reportDirectory.isDirectory()) {
-            throw new IOException("The reports directory has to be a directory: " + reportDirectoryName);
+            throw new IOException("The reports directory has to be a directory: " + config.getReportDirectory());
         }
 
-        this.exactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "exact_matches.csv"), separator, header);
-        this.multipleExactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "multiple_exact_matches.csv"), separator, header);
-        this.partialMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "partial_matches.csv"), separator, header);
-        this.noMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "no_matches.csv"), separator, header);
-        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "process_errors.csv"), separator, header);
+        String sep = config.getSeparator();
+        boolean header = config.isHeader();
+        this.exactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "exact_matches.csv"), sep, header);
+        this.multipleExactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "multiple_exact_matches.csv"), sep, header);
+        this.partialMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "partial_matches.csv"), sep, header);
+        this.noMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "no_matches.csv"), sep, header);
+        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "process_errors.csv"), sep, header);
     }
 }

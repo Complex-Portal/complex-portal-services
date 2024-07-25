@@ -1,16 +1,17 @@
 #!/bin/bash
 
-if [ $# -ne 4 ]; then
+if [ $# -ne 5 ]; then
       echo ""
       echo "ERROR: wrong number of parameters ($#)."
-      echo "usage: $0 INPUT_FILE OUTPUT_FILE_NAME SEPARATOR[',', '\t'] HEADER[true, false]"
+      echo "usage: $0 INPUT_FILE OUTPUT_FILE_NAME REPORT_DIR SEPARATOR[',', '\t'] HEADER[true, false]"
       echo ""
       exit 1
 fi
 
 INPUT_FILE=$1
 OUTPUT_FILE_NAME=$2
-SEPARATOR=$3
-HEADER=$4
+REPORT_DIR=$3
+SEPARATOR=$4
+HEADER=$5
 
-mvn clean -U install -P process-uniplex-file -DinputFileName=$INPUT_FILE -DoutputFileName=$OUTPUT_FILE_NAME -Dseparator=$SEPARATOR -Dheader=$HEADER -Dmaven.test.skip
+mvn clean -U install -P process-uniplex-file -Dinput.file.name=$INPUT_FILE -Doutput.file.name=$OUTPUT_FILE_NAME -Doutput.directory=$REPORT_DIR -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests

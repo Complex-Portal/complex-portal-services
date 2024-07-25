@@ -1,8 +1,10 @@
 package uk.ac.ebi.complex.service.processor;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import uk.ac.ebi.complex.service.config.ComplexServiceConfiguration;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.reader.UniplexClusterReader;
 import uk.ac.ebi.complex.service.writer.UniplexClusterWriter;
@@ -14,30 +16,32 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Data
 @AllArgsConstructor
 public class UniplexFileProcessor {
 
     private static final Log LOG = LogFactory.getLog(UniplexFileProcessor.class);
 
-    private final String inputFileName;
-    private final String outputFileName;
-    private final UniplexClusterReader uniplexClusterReader;
-    private final UniplexClusterWriter uniplexClusterWriter;
+    private ComplexServiceConfiguration config;
+    private UniplexClusterReader uniplexClusterReader;
+    private UniplexClusterWriter uniplexClusterWriter;
 
     public void processFile() throws IOException {
         // First delete the temp file if it exists
-        File tempOutputFile = new File(outputFileName);
+        System.out.println(config);
+
+        File tempOutputFile = config.outputPath().toFile();
         if (tempOutputFile.exists()) {
-            LOG.info("Deleting file " + outputFileName + "...");
+            LOG.info("Deleting file " + config.getOutputFileName() + "...");
             tempOutputFile.delete();
         }
 
         LOG.info("Reading Uniplex file...");
-        Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFileName);
+        Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile();
         LOG.info("Checking duplicates...");
         Collection<UniplexCluster> clustersWithoutDuplicates = mergeDuplicateClusters(clusters);
         LOG.info("Writing output file...");
-        uniplexClusterWriter.writeClustersToFile(clustersWithoutDuplicates, outputFileName);
+        uniplexClusterWriter.writeClustersToFile(clustersWithoutDuplicates);
         // TODO: filter out low confidence clusters
     }
 
@@ -67,22 +71,21 @@ public class UniplexFileProcessor {
     }
 
     public static void main(String[] args) throws IOException {
-        if (args.length != 4) {
-            System.err.println("Usage: UniplexFileProcessor <input_file_name> <output_file_name> <separator> <header>");
+        if (args.length != 5) {
+            System.err.println("Usage: UniplexFileProcessor <input_file_name> <output_file_name> <report_directory> <separator> <header>");
             System.exit(1);
         }
 
-        String inputFileName = args[0];
-        String outputFileName = args[1];
-        String separator = args[2];
-        boolean header = Boolean.parseBoolean(args[3]);
 
-        UniplexFileProcessor uniplexFileProcessor = new UniplexFileProcessor(
-                inputFileName,
-                outputFileName,
-                new UniplexClusterReader(separator, header),
-                new UniplexClusterWriter(separator, header));
+        ComplexServiceConfiguration c = ComplexServiceConfiguration.builder()
+                .inputFileName(args[0])
+                .outputFileName(args[1])
+                .reportDirectory(args[2])
+                .separator(args[3])
+                .header(Boolean.parseBoolean(args[4]))
+                .build();
 
+        UniplexFileProcessor uniplexFileProcessor = new UniplexFileProcessor(c, new UniplexClusterReader(c), new UniplexClusterWriter(c));
         uniplexFileProcessor.processFile();
     }
 }

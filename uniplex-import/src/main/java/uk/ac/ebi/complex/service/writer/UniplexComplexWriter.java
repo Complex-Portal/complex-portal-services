@@ -1,6 +1,7 @@
 package uk.ac.ebi.complex.service.writer;
 
 import lombok.RequiredArgsConstructor;
+import lombok.Data;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.item.ExecutionContext;
@@ -8,6 +9,7 @@ import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.Assert;
+import uk.ac.ebi.complex.service.config.ComplexServiceConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.ReportWriter;
 import uk.ac.ebi.complex.service.logging.WriteReportWriter;
@@ -23,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Data
 @RequiredArgsConstructor
 public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStream {
 
@@ -34,11 +37,9 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
     public final static String MERGED_TRANSIENT_MAP_COUNT = "merged.transient.map";
     public final static String REPLACED_TRANSIENT_MAP_COUNT = "transient.replaced.map";
 
-    private final UniplexComplexManager uniplexComplexManager;
-    private final ComplexService complexService;
-    private final String reportDirectoryName;
-    private final String separator;
-    private final boolean header;
+    private UniplexComplexManager uniplexComplexManager;
+    private ComplexService complexService;
+    private ComplexServiceConfiguration config;
 
     private DbSynchronizerStatisticsReporter synchronizerListener;
 
@@ -213,13 +214,16 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
     }
 
     private void initialiseReportWriters() throws IOException {
-        File reportDirectory = new File(reportDirectoryName);
+        File reportDirectory = new File(config.getReportDirectory());
         if (!reportDirectory.exists()) {
             reportDirectory.mkdirs();
         }
         if (!reportDirectory.isDirectory()) {
-            throw new IOException("The reports directory has to be a directory: " + reportDirectoryName);
+            throw new IOException("The reports directory has to be a directory: " + config.getReportDirectory());
         }
+
+        String separator = config.getSeparator();
+        boolean header = config.isHeader();
 
         this.newComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "new_complexes.csv"), separator, header);
         this.mergedComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "merged_complexes.csv"), separator, header);

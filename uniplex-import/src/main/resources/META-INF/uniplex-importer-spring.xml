@@ -165,6 +165,14 @@
     </bean>
 
     <!-- Uniplex Importer Beans -->
+    <bean id="complexServiceConfiguration" class="uk.ac.ebi.complex.service.config.ComplexServiceConfiguration" lazy-init="true">
+        <property name="inputFileName" value="${input.file.name}"/>
+        <property name="outputFileName" value="${output.file.name}"/>
+        <property name="reportDirectory" value="${output.directory}"/>
+        <property name="header" value="${header}"/>
+        <property name="separator" value="${separator}"/>
+    </bean>
+
     <bean id="complexFinder" class="uk.ac.ebi.complex.service.ComplexFinder" lazy-init="true">
         <constructor-arg index="0" ref="intactDao"/>
     </bean>
@@ -187,39 +195,35 @@
 
     <!-- readers -->
     <bean id="uniplexClusterReader" class="uk.ac.ebi.complex.service.reader.UniplexClusterReader" lazy-init="true">
-        <constructor-arg index="0" value="${separator}"/>
-        <constructor-arg index="1" value="${header}"/>
+        <property name="config" ref="complexServiceConfiguration"/>
     </bean>
+
     <bean id="uniplexFileReader" class="uk.ac.ebi.complex.service.reader.UniplexFileReader" lazy-init="true">
-        <constructor-arg index="0" value="${output.directory}/temp-file.csv"/>
-        <constructor-arg index="1" ref="uniplexClusterReader"/>
+        <property name="config" ref="complexServiceConfiguration"/>
     </bean>
 
     <!-- processors -->
     <bean id="uniplexFileProcessor" class="uk.ac.ebi.complex.service.processor.UniplexFileProcessor" lazy-init="true">
-        <constructor-arg index="0" value="${input.file}"/>
-        <constructor-arg index="1" value="${output.directory}/temp-file.csv"/>
-        <constructor-arg index="2" ref="uniplexClusterReader"/>
-        <constructor-arg index="3" ref="uniplexClusterWriter"/>
+        <property name="config" ref="complexServiceConfiguration"/>
+        <property name="uniplexClusterReader" ref="uniplexClusterReader"/>
+        <property name="uniplexClusterWriter" ref="uniplexClusterWriter"/>
     </bean>
     <bean id="uniplexClusterProcessor" class="uk.ac.ebi.complex.service.processor.UniplexClusterProcessor" lazy-init="true">
-        <constructor-arg index="0" ref="intactComplexService"/>
-        <constructor-arg index="1" value="${output.directory}"/>
-        <constructor-arg index="2" value="${separator}"/>
-        <constructor-arg index="3" value="${header}"/>
+        <property name="intactComplexService" ref="intactComplexService"/>
+        <property name="config" ref="complexServiceConfiguration"/>
     </bean>
 
     <!-- writers -->
     <bean id="uniplexClusterWriter" class="uk.ac.ebi.complex.service.writer.UniplexClusterWriter" lazy-init="true">
-        <constructor-arg index="0" value="${separator}"/>
-        <constructor-arg index="1" value="${header}"/>
+        <property name="config" ref="complexServiceConfiguration"/>
     </bean>
     <bean id="uniplexComplexWriter" class="uk.ac.ebi.complex.service.writer.UniplexComplexWriter" lazy-init="true">
-        <constructor-arg index="0" ref="uniplexComplexManager"/>
-        <constructor-arg index="1" ref="complexService"/>
-        <constructor-arg index="2" value="${output.directory}"/>
-        <constructor-arg index="3" value="${separator}"/>
-        <constructor-arg index="4" value="${header}"/>
+        <property name="uniplexComplexManager" ref="uniplexComplexManager"/>
+        <property name="config" ref="complexServiceConfiguration"/>
+        <property name="complexService" ref="complexService"/>
+    </bean>
+
+    <bean id="uniprotMappingService" class="uk.ac.ebi.complex.service.service.UniProtMappingService" lazy-init="true">
     </bean>
 
     <!-- Import Steps -->

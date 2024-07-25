@@ -1,29 +1,26 @@
 package uk.ac.ebi.complex.service.reader;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.ItemStream;
-import org.springframework.batch.item.ItemStreamException;
-import org.springframework.batch.item.NonTransientResourceException;
-import org.springframework.batch.item.ParseException;
-import org.springframework.batch.item.UnexpectedInputException;
+import lombok.Data;
+import org.springframework.batch.item.*;
 import org.springframework.util.Assert;
+import uk.ac.ebi.complex.service.config.ComplexServiceConfiguration;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 
-@RequiredArgsConstructor
+@Data
 public class UniplexFileReader implements ItemReader<UniplexCluster>, ItemStream {
 
     private static final String COUNT_OPTION = "cluster_count";
 
-    private final String inputFileName;
+    private ComplexServiceConfiguration config;
+
     private final UniplexClusterReader uniplexClusterReader;
 
     private Iterator<UniplexCluster> clusterIterator;
+
     private int clusterCount = 0;
 
     @Override
@@ -39,7 +36,7 @@ public class UniplexFileReader implements ItemReader<UniplexCluster>, ItemStream
 
         try {
             // TODO: should we have a filter on the confidence score?
-            Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFileName);
+            Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile();
             this.clusterIterator = clusters.iterator();
 
             // the job has been restarted, we update iterator
@@ -53,7 +50,7 @@ public class UniplexFileReader implements ItemReader<UniplexCluster>, ItemStream
                 }
             }
         } catch (IOException e) {
-            throw new ItemStreamException("Input file could not be read: " + inputFileName, e);
+            throw new ItemStreamException("Input file could not be read: " + config.getInputFileName(), e);
         }
     }
 

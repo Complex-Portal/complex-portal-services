@@ -17,6 +17,11 @@
     <properties>
         <db.url>${db.protocol}:${db.subprotocol}${db.separator}${db.alias}</db.url>
         <db.hbm2ddl>none</db.hbm2ddl>
+        <output.file.name>temp-file.tsv</output.file.name>
+        <input.file.name></input.file.name>
+        <output.directory>target/reports</output.directory>
+        <separator>\t</separator>
+        <header>true</header>
     </properties>
 
     <profiles>
@@ -43,8 +48,9 @@
                                 <argument>-classpath</argument>
                                 <classpath />
                                 <argument>uk.ac.ebi.complex.service.processor.UniplexFileProcessor</argument>
-                                <argument>${inputFileName}</argument>
-                                <argument>${outputFileName}</argument>
+                                <argument>${input.file.name}</argument>
+                                <argument>${output.file.name}</argument>
+                                <argument>${output.directory}</argument>
                                 <argument>${separator}</argument>
                                 <argument>${header}</argument>
                             </arguments>
@@ -143,9 +149,28 @@
         </dependency>
 
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
             <version>5.9</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.9.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpmime</artifactId>
+            <version>4.5.13</version>
         </dependency>
     </dependencies>
 </project>
