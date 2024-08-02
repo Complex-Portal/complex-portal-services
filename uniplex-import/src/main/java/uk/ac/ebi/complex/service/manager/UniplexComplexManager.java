@@ -1,8 +1,8 @@
 package uk.ac.ebi.complex.service.manager;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import lombok.extern.log4j.Log4j;
+import org.springframework.stereotype.Component;
 import psidev.psi.mi.jami.bridges.exception.BridgeFailedException;
 import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
 import psidev.psi.mi.jami.model.Alias;
@@ -40,10 +40,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Log4j
+@Component
 @RequiredArgsConstructor
 public class UniplexComplexManager {
-
-    private static final Log LOG = LogFactory.getLog(UniplexComplexManager.class);
 
     private static final String STABLE_COMPLEX_MI = "MI:1302";
     private static final String PHYSICAL_ASSOCIATION_MI = "MI:0915";
@@ -209,11 +209,11 @@ public class UniplexComplexManager {
 
         if (geneNamesConcatenated.isEmpty()) {
             // TODO: what to do if we have no gene names?
-            LOG.warn("Systematic name could not be generated for complex " + complex.getComplexAc() + ", using cluster Id");
+            log.warn("Systematic name could not be generated for complex " + complex.getComplexAc() + ", using cluster Id");
             complex.setSystematicName(complex.getShortName());
         } else if (geneNamesConcatenated.length() > IntactUtils.MAX_ALIAS_NAME_LEN) {
             // TODO: MAX_ALIAS_NAME_LEN is 4000, do we want a more reasonable limit?
-            LOG.warn("Systematic name too long for complex " + complex.getComplexAc());
+            log.warn("Systematic name too long for complex " + complex.getComplexAc());
             complex.setSystematicName(geneNamesConcatenated.substring(0, IntactUtils.MAX_ALIAS_NAME_LEN));
         } else {
             complex.setSystematicName(geneNamesConcatenated);
