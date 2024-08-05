@@ -31,4 +31,7 @@ public class AppProperties {
 
     @Value("${jami.ac.prefix}")
     private String acPrefix;
+
+    @Value("${dry.run.mode}")
+    private boolean dryRunMode;
 }

@@ -8,6 +8,7 @@ import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import uk.ac.ebi.complex.service.config.AppProperties;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.ReportWriter;
@@ -38,6 +39,7 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
     private final UniplexComplexManager uniplexComplexManager;
     private final ComplexService complexService;
     private final FileConfiguration fileConfiguration;
+    private final AppProperties appProperties;
 
     private DbSynchronizerStatisticsReporter synchronizerListener;
 
@@ -187,7 +189,9 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
             }
         }
 
-        this.complexService.saveOrUpdate(complexesToSave.values());
+        if (!appProperties.isDryRunMode()) {
+            this.complexService.saveOrUpdate(complexesToSave.values());
+        }
 
         for (UniplexComplex complex: items) {
             String clusterIds = String.join(",", complex.getCluster().getClusterIds());
