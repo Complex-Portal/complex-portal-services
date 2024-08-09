@@ -1,15 +1,15 @@
 package uk.ac.ebi.complex.service.writer;
 
 import lombok.RequiredArgsConstructor;
-import lombok.Data;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
-import uk.ac.ebi.complex.service.config.ComplexServiceConfiguration;
+import uk.ac.ebi.complex.service.config.AppProperties;
+import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.ReportWriter;
 import uk.ac.ebi.complex.service.logging.WriteReportWriter;
@@ -25,11 +25,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Data
+@Log4j
+@Component
 @RequiredArgsConstructor
 public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStream {
-
-    private static final Log LOG = LogFactory.getLog(UniplexComplexWriter.class);
 
     public final static String PERSIST_MAP_COUNT = "persisted.map";
     public final static String MERGE_MAP_COUNT = "merged.map";
@@ -37,9 +36,10 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
     public final static String MERGED_TRANSIENT_MAP_COUNT = "merged.transient.map";
     public final static String REPLACED_TRANSIENT_MAP_COUNT = "transient.replaced.map";
 
-    private UniplexComplexManager uniplexComplexManager;
-    private ComplexService complexService;
-    private ComplexServiceConfiguration config;
+    private final UniplexComplexManager uniplexComplexManager;
+    private final ComplexService complexService;
+    private final FileConfiguration fileConfiguration;
+    private final AppProperties appProperties;
 
     private DbSynchronizerStatisticsReporter synchronizerListener;
 
@@ -147,21 +147,21 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
         }
 
         // flush statistics
-        LOG.info("Created objects in database: ");
+        log.info("Created objects in database: ");
         for (Map.Entry<Class, Integer> entry : synchronizerListener.getPersistedCounts().entrySet()){
-            LOG.info(entry.getKey().getSimpleName()+": "+entry.getValue());
+            log.info(entry.getKey().getSimpleName()+": "+entry.getValue());
         }
-        LOG.info("Objects already in the database: ");
+        log.info("Objects already in the database: ");
         for (Map.Entry<Class, Integer> entry : synchronizerListener.getMergedTransientCounts().entrySet()){
-            LOG.info(entry.getKey().getSimpleName()+": "+entry.getValue());
+            log.info(entry.getKey().getSimpleName()+": "+entry.getValue());
         }
-        LOG.info("Objects replaced with existing instance in the database: ");
+        log.info("Objects replaced with existing instance in the database: ");
         for (Map.Entry<Class, Integer> entry : synchronizerListener.getTransientReplacedCounts().entrySet()){
-            LOG.info(entry.getKey().getSimpleName()+": "+entry.getValue());
+            log.info(entry.getKey().getSimpleName()+": "+entry.getValue());
         }
-        LOG.info("Existing Objects merged: ");
+        log.info("Existing Objects merged: ");
         for (Map.Entry<Class, Integer> entry : synchronizerListener.getMergedCounts().entrySet()){
-            LOG.info(entry.getKey().getSimpleName()+": "+entry.getValue());
+            log.info(entry.getKey().getSimpleName()+": "+entry.getValue());
         }
         // remove listener
         this.synchronizerListener = null;
@@ -184,12 +184,14 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
                             uniplexComplexManager.newComplexFromCluster(complex.getCluster()));
                 }
             } catch (Exception e) {
-                LOG.error("Error writing to DB uniplex clusters: " + String.join(",", complex.getCluster().getClusterIds()), e);
+                log.error("Error writing to DB uniplex clusters: " + String.join(",", complex.getCluster().getClusterIds()), e);
                 errorReportWriter.write(complex.getCluster().getClusterIds(), e.getMessage());
             }
         }
 
-        this.complexService.saveOrUpdate(complexesToSave.values());
+        if (!appProperties.isDryRunMode()) {
+            this.complexService.saveOrUpdate(complexesToSave.values());
+        }
 
         for (UniplexComplex complex: items) {
             String clusterIds = String.join(",", complex.getCluster().getClusterIds());
@@ -214,19 +216,20 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
     }
 
     private void initialiseReportWriters() throws IOException {
-        File reportDirectory = new File(config.getReportDirectory());
+        File reportDirectory = new File(fileConfiguration.getReportDirectory());
         if (!reportDirectory.exists()) {
             reportDirectory.mkdirs();
         }
         if (!reportDirectory.isDirectory()) {
-            throw new IOException("The reports directory has to be a directory: " + config.getReportDirectory());
+            throw new IOException("The reports directory has to be a directory: " + fileConfiguration.getReportDirectory());
         }
 
-        String separator = config.getSeparator();
-        boolean header = config.isHeader();
+        String separator = fileConfiguration.getSeparator();
+        boolean header = fileConfiguration.isHeader();
+        String extension = fileConfiguration.getExtension();
 
-        this.newComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "new_complexes.csv"), separator, header);
-        this.mergedComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "merged_complexes.csv"), separator, header);
-        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "write_errors.csv"), separator, header);
+        this.newComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "new_complexes" + extension), separator, header);
+        this.mergedComplexesReportWriter = new WriteReportWriter(new File(reportDirectory, "merged_complexes" + extension), separator, header);
+        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "write_errors" + extension), separator, header);
     }
 }

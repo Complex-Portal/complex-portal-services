@@ -1,8 +1,8 @@
 package uk.ac.ebi.complex.service.manager;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import lombok.extern.log4j.Log4j;
+import org.springframework.stereotype.Component;
 import psidev.psi.mi.jami.bridges.exception.BridgeFailedException;
 import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
 import psidev.psi.mi.jami.model.Alias;
@@ -40,24 +40,21 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Log4j
+@Component
 @RequiredArgsConstructor
 public class UniplexComplexManager {
-
-    private static final Log LOG = LogFactory.getLog(UniplexComplexManager.class);
 
     private static final String STABLE_COMPLEX_MI = "MI:1302";
     private static final String PHYSICAL_ASSOCIATION_MI = "MI:0915";
     private static final String GENE_NAME_MI = "MI:0301";
     private final static String AUTHOR_CONFIDENCE_TOPIC_ID = "MI:0621";
+    private static final String ML_ECO_CODE = "ECO:0008004";
+    private final static String HUMAP_DATABASE_ID = "MI:2424";
+    private final static String HUMAP_INSTITUION_ID = "MI:2424";
+
     private static final Integer HUMAN_TAX_ID = 9606;
     private static final String READY_FOR_RELEASE_COMPLEX_PUBMED_ID = "14681455";
-
-    // TODO: replace the following ids with MI ids when these terms are created in OLS and imported in the DB
-    private final static String HUMAP_DATABASE_ID = "IA:3601";
-    // TODO: should be ECO:0008004, but it's not yet created in the DB
-    private static final String ML_ECO_CODE = "IA:3603";
-    // TODO: replace with the actual institution id when it is agreed and created
-    private final static String HUMAP_INSTITUION_ID = "IA:3601";
 
     // TODO: this needs to be updated to an agreed creator, or we should take it as an input parameter to the job
     private static final String CREATOR_USERNAME = "jmedina";
@@ -209,11 +206,11 @@ public class UniplexComplexManager {
 
         if (geneNamesConcatenated.isEmpty()) {
             // TODO: what to do if we have no gene names?
-            LOG.warn("Systematic name could not be generated for complex " + complex.getComplexAc() + ", using cluster Id");
+            log.warn("Systematic name could not be generated for complex " + complex.getComplexAc() + ", using cluster Id");
             complex.setSystematicName(complex.getShortName());
         } else if (geneNamesConcatenated.length() > IntactUtils.MAX_ALIAS_NAME_LEN) {
             // TODO: MAX_ALIAS_NAME_LEN is 4000, do we want a more reasonable limit?
-            LOG.warn("Systematic name too long for complex " + complex.getComplexAc());
+            log.warn("Systematic name too long for complex " + complex.getComplexAc());
             complex.setSystematicName(geneNamesConcatenated.substring(0, IntactUtils.MAX_ALIAS_NAME_LEN));
         } else {
             complex.setSystematicName(geneNamesConcatenated);

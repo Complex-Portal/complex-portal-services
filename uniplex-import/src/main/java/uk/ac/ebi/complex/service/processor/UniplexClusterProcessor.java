@@ -1,16 +1,15 @@
 package uk.ac.ebi.complex.service.processor;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
+import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import uk.ac.ebi.complex.service.ComplexFinderResult;
-import uk.ac.ebi.complex.service.config.ComplexServiceConfiguration;
+import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.ProcessReportWriter;
 import uk.ac.ebi.complex.service.logging.ReportWriter;
@@ -24,14 +23,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Data
-@NoArgsConstructor
+@Log4j
+@Component
+@RequiredArgsConstructor
 public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, UniplexComplex>, ItemStream {
 
-    private static final Log LOG = LogFactory.getLog(UniplexClusterProcessor.class);
-
-    private IntactComplexService intactComplexService;
-    private ComplexServiceConfiguration config;
+    private final IntactComplexService intactComplexService;
+    private final FileConfiguration fileConfiguration;
 
     private ReportWriter exactMatchesReportWriter;
     private ReportWriter multipleExactMatchesReportWriter;
@@ -55,7 +53,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                                 item.getUniprotAcs(),
                                 complexMatch.getComplexAc());
                     }
-                    LOG.warn("Clusters " +
+                    log.warn("Clusters " +
                             String.join(",", item.getClusterIds()) +
                             " matched exactly to multiple complexes: " +
                             complexFinderResult.getExactMatches()
@@ -97,7 +95,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                 return new UniplexComplex(item, null);
             }
         } catch (Exception e) {
-            LOG.error("Error finding complex matches for uniplex clusters: " + String.join(",", item.getClusterIds()), e);
+            log.error("Error finding complex matches for uniplex clusters: " + String.join(",", item.getClusterIds()), e);
             errorReportWriter.write(item.getClusterIds(), e.getMessage());
             return null;
         }
@@ -141,20 +139,22 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
     }
 
     private void initialiseReportWriters() throws IOException {
-        File reportDirectory = new File(config.getReportDirectory());
+        File reportDirectory = new File(fileConfiguration.getReportDirectory());
         if (!reportDirectory.exists()) {
             reportDirectory.mkdirs();
         }
         if (!reportDirectory.isDirectory()) {
-            throw new IOException("The reports directory has to be a directory: " + config.getReportDirectory());
+            throw new IOException("The reports directory has to be a directory: " + fileConfiguration.getReportDirectory());
         }
 
-        String sep = config.getSeparator();
-        boolean header = config.isHeader();
-        this.exactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "exact_matches.csv"), sep, header);
-        this.multipleExactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "multiple_exact_matches.csv"), sep, header);
-        this.partialMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "partial_matches.csv"), sep, header);
-        this.noMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "no_matches.csv"), sep, header);
-        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "process_errors.csv"), sep, header);
+        String sep = fileConfiguration.getSeparator();
+        boolean header = fileConfiguration.isHeader();
+        String extension = fileConfiguration.getExtension();
+
+        this.exactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "exact_matches" + extension), sep, header);
+        this.multipleExactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "multiple_exact_matches" + extension), sep, header);
+        this.partialMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "partial_matches" + extension), sep, header);
+        this.noMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "no_matches" + extension), sep, header);
+        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "process_errors" + extension), sep, header);
     }
 }

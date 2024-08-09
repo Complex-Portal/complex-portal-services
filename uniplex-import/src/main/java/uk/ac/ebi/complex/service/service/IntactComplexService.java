@@ -3,6 +3,7 @@ package uk.ac.ebi.complex.service.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.stereotype.Component;
 import psidev.psi.mi.jami.model.Protein;
 import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.ComplexFinder;
@@ -22,6 +23,7 @@ import uk.ac.ebi.intact.jami.synchronizer.SynchronizerException;
 import javax.persistence.PersistenceException;
 import java.util.Collection;
 
+@Component
 @RequiredArgsConstructor
 public class IntactComplexService {
 
