@@ -49,15 +49,12 @@ public class UniplexComplexManager {
     private static final String PHYSICAL_ASSOCIATION_MI = "MI:0915";
     private static final String GENE_NAME_MI = "MI:0301";
     private final static String AUTHOR_CONFIDENCE_TOPIC_ID = "MI:0621";
+    private static final String ML_ECO_CODE = "ECO:0008004";
+    private final static String HUMAP_DATABASE_ID = "MI:2424";
+    private final static String HUMAP_INSTITUION_ID = "MI:2424";
+
     private static final Integer HUMAN_TAX_ID = 9606;
     private static final String READY_FOR_RELEASE_COMPLEX_PUBMED_ID = "14681455";
-
-    // TODO: replace the following ids with MI ids when these terms are created in OLS and imported in the DB
-    private final static String HUMAP_DATABASE_ID = "IA:3601";
-    // TODO: should be ECO:0008004, but it's not yet created in the DB
-    private static final String ML_ECO_CODE = "IA:3603";
-    // TODO: replace with the actual institution id when it is agreed and created
-    private final static String HUMAP_INSTITUION_ID = "IA:3601";
 
     // TODO: this needs to be updated to an agreed creator, or we should take it as an input parameter to the job
     private static final String CREATOR_USERNAME = "jmedina";
