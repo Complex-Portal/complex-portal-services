@@ -9,6 +9,7 @@ import psidev.psi.mi.jami.model.Alias;
 import psidev.psi.mi.jami.model.Entity;
 import psidev.psi.mi.jami.model.Protein;
 import psidev.psi.mi.jami.model.Xref;
+import uk.ac.ebi.complex.service.config.AppProperties;
 import uk.ac.ebi.complex.service.exception.CvTermNotFoundException;
 import uk.ac.ebi.complex.service.exception.OrganismNotFoundException;
 import uk.ac.ebi.complex.service.exception.ProteinException;
@@ -56,11 +57,9 @@ public class UniplexComplexManager {
     private static final Integer HUMAN_TAX_ID = 9606;
     private static final String READY_FOR_RELEASE_COMPLEX_PUBMED_ID = "14681455";
 
-    // TODO: this needs to be updated to an agreed creator, or we should take it as an input parameter to the job
-    private static final String CREATOR_USERNAME = "jmedina";
-
     private final IntactComplexService intactComplexService;
     private final UniprotProteinFetcher uniprotProteinFetcher;
+    private final AppProperties appProperties;
 
     private final Map<String, IntactCvTerm> cvTermMap = new HashMap<>();
     private final Map<String, IntactSource> sourceMap = new HashMap<>();
@@ -117,7 +116,7 @@ public class UniplexComplexManager {
     }
 
     private void setComplexStatus(IntactComplex complex) throws UserNotFoundException {
-        User user = findUser(CREATOR_USERNAME);
+        User user = findUser(appProperties.getUserContextId());
         complex.setCreator(user.getLogin());
         complex.setUpdator(user.getLogin());
 

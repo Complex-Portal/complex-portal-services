@@ -1,18 +1,28 @@
 #!/bin/bash
 
-if [ $# -ne 5 ]; then
+#SBATCH --time=06-00:00:00   # walltime
+#SBATCH --ntasks=1   # number of tasks
+#SBATCH --cpus-per-task=5   # number of CPUs Per Task i.e if your code is multi-threaded
+#SBATCH -p production   # partition(s)
+#SBATCH --mem=16G   # memory per node
+#SBATCH -o "/nfs/production/hhe/intact/data/db-import-logs/import-uniplex-complexes-%j.out"   # job output file
+#SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
+#SBATCH --mail-type=ALL
+
+if [ $# -ne 6 ]; then
       echo ""
       echo "ERROR: wrong number of parameters ($#)."
-      echo "usage: $0 PROFILE INPUT_FILE OUTPUT_DIRECTORY SEPARATOR[',', '\t'] HEADER[true, false]"
+      echo "usage: $0 PROFILE USER_ID INPUT_FILE OUTPUT_DIRECTORY SEPARATOR[',', '\t'] HEADER[true, false]"
       echo ""
       exit 1
 fi
 
 PROFILE=$1;
-INPUT_FILE=$2
-OUTPUT_DIRECTORY=$3
-SEPARATOR=$4
-HEADER=$5
+USER_ID=$2;
+INPUT_FILE=$3
+OUTPUT_DIRECTORY=$4
+SEPARATOR=$5
+HEADER=$6
 
 echo "Profile: $PROFILE"
 echo "Input file: $INPUT_FILE"
@@ -20,4 +30,4 @@ echo "Output directory: $OUTPUT_DIRECTORY"
 echo "Separator: $SEPARATOR"
 echo "Header: $HEADER"
 
-mvn clean -U install -P import-uniplex-clusters,${PROFILE} -Djob.name=uniplexClusterImport -Dinput.file.name=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
+mvn clean -U install -P import-uniplex-clusters,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=uniplexClusterImport -Dinput.file.name=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
