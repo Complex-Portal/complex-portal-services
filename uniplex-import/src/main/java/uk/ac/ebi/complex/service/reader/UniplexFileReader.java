@@ -7,6 +7,7 @@ import org.springframework.util.Assert;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
@@ -38,7 +39,8 @@ public class UniplexFileReader implements ItemReader<UniplexCluster>, ItemStream
 
         try {
             // TODO: should we have a filter on the confidence score?
-            Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile();
+            File inputFile = fileConfiguration.outputPath().toFile();
+            Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFile);
             this.clusterIterator = clusters.iterator();
 
             // the job has been restarted, we update iterator

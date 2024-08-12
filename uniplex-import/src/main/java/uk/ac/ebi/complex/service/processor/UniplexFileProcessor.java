@@ -52,7 +52,8 @@ public class UniplexFileProcessor {
         }
 
         log.info("Reading Uniplex file...");
-        Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile();
+        File inputFile = new File(fileConfiguration.getInputFileName());
+        Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFile);
         log.info("Cleaning all UniProt ACs...");
         Collection<UniplexCluster> clustersWithCleanUniprotAcs = cleanUniprotACs(clusters);
         log.info("Checking duplicates...");
