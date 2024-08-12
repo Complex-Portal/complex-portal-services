@@ -4,6 +4,7 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Component;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
@@ -12,11 +13,14 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Log4j
 @Component
 @RequiredArgsConstructor
 public class UniplexClusterReader {
 
     private final FileConfiguration fileConfiguration;
+
+    private int lineCounter = 0;
 
     public Collection<UniplexCluster> readClustersFromFile() throws IOException {
         File inputFile = new File(fileConfiguration.getInputFileName());
@@ -28,6 +32,7 @@ public class UniplexClusterReader {
 
         if (fileConfiguration.isHeader()) {
             csvReader.skip(1);
+            lineCounter++;
         }
 
         List<UniplexCluster> clusters = new ArrayList<>();
@@ -38,9 +43,16 @@ public class UniplexClusterReader {
     }
 
     private UniplexCluster clusterFromStringArray(String[] csvLine) {
-        String clusterId = csvLine[0];
-        String clusterConfidence = csvLine[1];
-        String[] uniprotAcs = csvLine[2].split(" ");
+        try {
+            String clusterId = csvLine[0];
+            String clusterConfidence = csvLine[1];
+            String[] uniprotAcs = csvLine[2].split(" ");
+        } catch (java.lang.ArrayIndexOutOfBoundsException e) {
+            log.error("Error reading line " + lineCounter + ": " + String.join(",", csvLine), e);
+            throw e;
+        }
+
+        lineCounter++;
 
         return new UniplexCluster(
                 Collections.singletonList(clusterId),
