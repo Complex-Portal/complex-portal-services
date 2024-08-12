@@ -4,14 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
-import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang3.stream.Streams;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.StringBody;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import uk.ac.ebi.complex.service.model.UniProt;
 
 import java.io.BufferedReader;
@@ -25,15 +25,13 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static uk.ac.ebi.complex.service.model.UniProt.IdMapping.Poll.POLL_URL;
 import static uk.ac.ebi.complex.service.model.UniProt.IdMapping.Result.RESULT_URL;
 
-@Log
-@Service
+@Log4j
+@Component
 public class UniProtMappingService {
 
     private final HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
@@ -60,7 +58,7 @@ public class UniProtMappingService {
                             return v1;
                         }));
                     } catch (IOException | InterruptedException e) {
-                        log.severe(e.getMessage());
+                        log.error(e.getMessage());
                     }
                 });
 
