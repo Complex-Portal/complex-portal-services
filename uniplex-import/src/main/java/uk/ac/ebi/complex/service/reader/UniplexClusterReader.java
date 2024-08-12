@@ -47,19 +47,19 @@ public class UniplexClusterReader {
             String clusterId = csvLine[0];
             String clusterConfidence = csvLine[1];
             String[] uniprotAcs = csvLine[2].split(" ");
+
+            lineCounter++;
+
+            return new UniplexCluster(
+                    Collections.singletonList(clusterId),
+                    Integer.parseInt(clusterConfidence),
+                    Arrays.stream(uniprotAcs)
+                            .sorted()
+                            .distinct()
+                            .collect(Collectors.toList()));
         } catch (java.lang.ArrayIndexOutOfBoundsException e) {
             log.error("Error reading line " + lineCounter + ": " + String.join(",", csvLine), e);
             throw e;
         }
-
-        lineCounter++;
-
-        return new UniplexCluster(
-                Collections.singletonList(clusterId),
-                Integer.parseInt(clusterConfidence),
-                Arrays.stream(uniprotAcs)
-                        .sorted()
-                        .distinct()
-                        .collect(Collectors.toList()));
     }
 }

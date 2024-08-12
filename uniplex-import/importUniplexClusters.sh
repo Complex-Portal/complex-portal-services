@@ -25,6 +25,7 @@ SEPARATOR=$5
 HEADER=$6
 
 echo "Profile: $PROFILE"
+echo "User id: $USER_ID"
 echo "Input file: $INPUT_FILE"
 echo "Output directory: $OUTPUT_DIRECTORY"
 echo "Separator: $SEPARATOR"
