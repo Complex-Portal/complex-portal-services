@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import psidev.psi.mi.jami.bridges.exception.BridgeFailedException;
 import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
 import psidev.psi.mi.jami.model.Alias;
+import psidev.psi.mi.jami.model.Annotation;
 import psidev.psi.mi.jami.model.Entity;
 import psidev.psi.mi.jami.model.Protein;
 import psidev.psi.mi.jami.model.Xref;
@@ -159,12 +160,20 @@ public class UniplexComplexManager {
     }
 
     private void addHumapXrefs(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
+        Collection<Xref> existingHumapXrefs = complex.getIdentifiers()
+                .stream()
+                .filter(id -> HUMAP_DATABASE_ID.equals(id.getDatabase().getMIIdentifier()))
+                .filter(id -> Xref.IDENTITY_MI.equals(id.getQualifier().getMIIdentifier()))
+                .collect(Collectors.toList());
         for (String clusterId: uniplexCluster.getClusterIds()) {
-            InteractorXref xref = newHumapXref(clusterId);
-            // We add the new xrefs to identifiers as we are using the identity qualifier.
-            // If we eventually use another qualifier, we should add them to xrefs.
-            complex.getIdentifiers().add(xref);
+            if (existingHumapXrefs.stream().noneMatch(id -> id.getId().equals(clusterId))) {
+                InteractorXref xref = newHumapXref(clusterId);
+                // We add the new xrefs to identifiers as we are using the identity qualifier.
+                // If we eventually use another qualifier, we should add them to xrefs.
+                complex.getIdentifiers().add(xref);
+            }
         }
+        // TODO: what to do with existing old humap xrefs no longer valid?
     }
 
     private InteractorXref newHumapXref(String id) throws CvTermNotFoundException {
@@ -176,8 +185,16 @@ public class UniplexComplexManager {
     }
 
     private void addConfidenceAnnotation(UniplexCluster uniplexCluster, IntactComplex complex) throws CvTermNotFoundException {
-        IntactCvTerm topic = findCvTerm(IntactUtils.TOPIC_OBJCLASS, AUTHOR_CONFIDENCE_TOPIC_ID);
-        complex.getAnnotations().add(new InteractorAnnotation(topic, uniplexCluster.getClusterConfidence().toString()));
+        Collection<Annotation> existingConfidenceAnnotations = complex.getAnnotations()
+                .stream()
+                .filter(ann -> AUTHOR_CONFIDENCE_TOPIC_ID.equals(ann.getTopic().getMIIdentifier()))
+                .collect(Collectors.toList());
+
+        if (existingConfidenceAnnotations.stream().noneMatch(ann -> ann.getValue().equals(uniplexCluster.getClusterConfidence().toString()))) {
+            IntactCvTerm topic = findCvTerm(IntactUtils.TOPIC_OBJCLASS, AUTHOR_CONFIDENCE_TOPIC_ID);
+            complex.getAnnotations().add(new InteractorAnnotation(topic, uniplexCluster.getClusterConfidence().toString()));
+        }
+        // TODO: what to do with existing old humap confidence annotations no longer valid?
     }
 
     private void setComplexAc(IntactComplex complex) throws CvTermNotFoundException {
