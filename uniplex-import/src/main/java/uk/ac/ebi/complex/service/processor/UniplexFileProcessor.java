@@ -24,6 +24,9 @@ import java.util.stream.Stream;
 @Component
 public class UniplexFileProcessor {
 
+    private final static int NUMBER_OF_COMPONENTS_LIMIT = 100;
+    private final static String COMPLEX_TOO_LARGE_ERROR = "Complex is too large, number of components = %d";
+
     private final FileConfiguration fileConfiguration;
     private final UniplexClusterReader uniplexClusterReader;
     private final UniplexClusterWriter uniplexClusterWriter;
@@ -54,8 +57,10 @@ public class UniplexFileProcessor {
         log.info("Reading Uniplex file...");
         File inputFile = new File(fileConfiguration.getInputFileName());
         Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFile);
+        log.info("Filtering out complexes with large number of components...");
+        Collection<UniplexCluster> clustersWithoutLargeOnes = filterOutLargeComplexes(clusters);
         log.info("Cleaning all UniProt ACs...");
-        Collection<UniplexCluster> clustersWithCleanUniprotAcs = cleanUniprotACs(clusters);
+        Collection<UniplexCluster> clustersWithCleanUniprotAcs = cleanUniprotACs(clustersWithoutLargeOnes);
         log.info("Checking duplicates...");
         Collection<UniplexCluster> clustersWithoutDuplicates = mergeDuplicateClusters(clustersWithCleanUniprotAcs);
         log.info("Writing output file...");
@@ -88,7 +93,24 @@ public class UniplexFileProcessor {
         return new UniplexCluster(clusterIds, clusterConfidence, clusterA.getUniprotAcs());
     }
 
-    private List<UniplexCluster> cleanUniprotACs(Collection<UniplexCluster> clusters) throws IOException {
+    private Collection<UniplexCluster> filterOutLargeComplexes(Collection<UniplexCluster> clusters) throws IOException {
+        List<UniplexCluster> filteredClusters = new ArrayList<>();
+        for (UniplexCluster cluster : clusters) {
+            int numberOfComponents = cluster.getUniprotAcs().size();
+            if (numberOfComponents > NUMBER_OF_COMPONENTS_LIMIT) {
+                ignoredReportWriter.write(
+                        cluster.getClusterIds(),
+                        cluster.getUniprotAcs(),
+                        new ArrayList<>(),
+                        List.of(String.format(COMPLEX_TOO_LARGE_ERROR, numberOfComponents)));
+            } else {
+                filteredClusters.add(cluster);
+            }
+        }
+        return filteredClusters;
+    }
+
+    private Collection<UniplexCluster> cleanUniprotACs(Collection<UniplexCluster> clusters) throws IOException {
         Set<String> identifiers = clusters.stream()
                 .flatMap(c -> c.getUniprotAcs().stream())
                 .collect(Collectors.toSet());

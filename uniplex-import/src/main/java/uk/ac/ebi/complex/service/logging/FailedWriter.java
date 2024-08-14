@@ -29,7 +29,12 @@ public class FailedWriter {
         csvWriter.writeNext(new String[]{"cluster_id", "participant_acs","problematic_acs", "reasons"});
     }
 
-    public void write(Collection<String> clusterIds, Collection<String> participantIds, Collection<String> problematicAcs, Collection<String> reasons) throws IOException {
+    public void write(
+            Collection<String> clusterIds,
+            Collection<String> participantIds,
+            Collection<String> problematicAcs,
+            Collection<String> reasons) throws IOException {
+
         csvWriter.writeNext(new String[]{
                 String.join(" ", clusterIds),
                 String.join(" ", participantIds),
