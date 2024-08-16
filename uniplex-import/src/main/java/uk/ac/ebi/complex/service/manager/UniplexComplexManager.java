@@ -17,7 +17,8 @@ import uk.ac.ebi.complex.service.exception.ProteinException;
 import uk.ac.ebi.complex.service.exception.SourceNotFoundException;
 import uk.ac.ebi.complex.service.exception.UserNotFoundException;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
-import uk.ac.ebi.complex.service.service.IntactComplexService;
+import uk.ac.ebi.intact.jami.dao.IntactDao;
+import uk.ac.ebi.intact.jami.model.ComplexAcValue;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.model.extension.IntactCvTerm;
 import uk.ac.ebi.intact.jami.model.extension.IntactModelledParticipant;
@@ -58,7 +59,7 @@ public class UniplexComplexManager {
     private static final Integer HUMAN_TAX_ID = 9606;
     private static final String READY_FOR_RELEASE_COMPLEX_PUBMED_ID = "14681455";
 
-    private final IntactComplexService intactComplexService;
+    private final IntactDao intactDao;
     private final UniprotProteinFetcher uniprotProteinFetcher;
     private final AppProperties appProperties;
 
@@ -132,7 +133,7 @@ public class UniplexComplexManager {
         if (proteinMap.containsKey(proteinId)) {
             return proteinMap.get(proteinId);
         }
-        Collection<IntactProtein> proteinByXref = intactComplexService.findProtein(proteinId);
+        Collection<IntactProtein> proteinByXref = intactDao.getProteinDao().getByXrefQualifier(Xref.IDENTITY, Xref.IDENTITY_MI, proteinId);
         if (!proteinByXref.isEmpty()) {
             if (proteinByXref.size() == 1) {
                 return proteinByXref.iterator().next();
@@ -142,7 +143,9 @@ public class UniplexComplexManager {
             Collection<Protein> uniprotProteins = uniprotProteinFetcher.fetchByIdentifier(proteinId);
             if (!uniprotProteins.isEmpty()) {
                 if (uniprotProteins.size() == 1) {
-                    IntactProtein intactProtein = intactComplexService.convertProteinToPersistentObject(uniprotProteins.iterator().next());
+                    IntactProtein intactProtein = intactDao.getSynchronizerContext()
+                            .getProteinSynchronizer()
+                            .convertToPersistentObject(uniprotProteins.iterator().next());
                     proteinMap.put(proteinId, intactProtein);
                     return intactProtein;
                 }
@@ -202,7 +205,7 @@ public class UniplexComplexManager {
         IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.COMPLEX_PRIMARY_MI);
         // In future versions we may need to increase the version
         String version = "1";
-        String acValue = intactComplexService.getNextComplexAc();
+        String acValue = ComplexAcValue.getNextComplexAcValue(intactDao.getEntityManager());
         InteractorXref xref = new InteractorXref(database, acValue, version, qualifier);
         complex.getIdentifiers().add(xref);
     }
@@ -252,7 +255,7 @@ public class UniplexComplexManager {
         if (cvTermMap.containsKey(key)) {
             return cvTermMap.get(key);
         }
-        IntactCvTerm cvTerm = intactComplexService.getCvTerm(clazz, id);
+        IntactCvTerm cvTerm = intactDao.getCvTermDao().getByUniqueIdentifier(id, clazz);
         if (cvTerm != null) {
             cvTermMap.put(key, cvTerm);
             return cvTerm;
@@ -264,7 +267,7 @@ public class UniplexComplexManager {
         if (sourceMap.containsKey(id)) {
             return sourceMap.get(id);
         }
-        IntactSource source = intactComplexService.getSource(id);
+        IntactSource source = intactDao.getSourceDao().getByMIIdentifier(id);
         if (source != null) {
             sourceMap.put(id, source);
             return source;
@@ -276,7 +279,7 @@ public class UniplexComplexManager {
         if (userMap.containsKey(username)) {
             return userMap.get(username);
         }
-        User user = intactComplexService.geUser(username);
+        User user = intactDao.getUserDao().getByLogin(username);
         if (user != null) {
             userMap.put(username, user);
             return user;
@@ -288,7 +291,7 @@ public class UniplexComplexManager {
         if (organismMap.containsKey(taxId)) {
             return organismMap.get(taxId);
         }
-        IntactOrganism organism = intactComplexService.getOrganism(taxId);
+        IntactOrganism organism = intactDao.getOrganismDao().getByTaxidOnly(taxId);
         if (organism != null) {
             organismMap.put(taxId, organism);
             return organism;

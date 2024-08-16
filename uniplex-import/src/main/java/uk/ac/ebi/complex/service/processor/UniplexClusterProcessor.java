@@ -8,6 +8,7 @@ import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import uk.ac.ebi.complex.service.ComplexFinder;
 import uk.ac.ebi.complex.service.ComplexFinderResult;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
@@ -15,7 +16,6 @@ import uk.ac.ebi.complex.service.logging.ProcessReportWriter;
 import uk.ac.ebi.complex.service.logging.ReportWriter;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.model.UniplexComplex;
-import uk.ac.ebi.complex.service.service.IntactComplexService;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, UniplexComplex>, ItemStream {
 
-    private final IntactComplexService intactComplexService;
+    private final ComplexFinder complexFinder;
     private final FileConfiguration fileConfiguration;
 
     private ReportWriter exactMatchesReportWriter;
@@ -40,7 +40,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
     @Override
     public UniplexComplex process(UniplexCluster item) throws Exception {
         try {
-            ComplexFinderResult<IntactComplex> complexFinderResult = intactComplexService
+            ComplexFinderResult<IntactComplex> complexFinderResult = this.complexFinder
                     .findComplexWithMatchingProteins(item.getUniprotAcs());
 
             if (!complexFinderResult.getExactMatches().isEmpty()) {

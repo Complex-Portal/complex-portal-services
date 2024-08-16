@@ -25,7 +25,6 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.retry.annotation.RetryConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 import psidev.psi.mi.jami.batch.BasicChunkLoggerListener;
 import psidev.psi.mi.jami.batch.MIBatchJobManager;
@@ -50,11 +49,6 @@ import java.util.Map;
 
 @Configuration
 public class UniPlexImportConfig {
-
-    @Bean
-    public RetryConfiguration retryConfiguration() {
-        return new RetryConfiguration();
-    }
 
     @Bean
     public PropertyPlaceholderConfigurer propertyPlaceholderConfigurer() {
