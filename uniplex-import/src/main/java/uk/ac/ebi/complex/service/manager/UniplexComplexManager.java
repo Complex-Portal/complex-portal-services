@@ -25,6 +25,7 @@ import uk.ac.ebi.intact.jami.model.extension.IntactModelledParticipant;
 import uk.ac.ebi.intact.jami.model.extension.IntactOrganism;
 import uk.ac.ebi.intact.jami.model.extension.IntactProtein;
 import uk.ac.ebi.intact.jami.model.extension.IntactSource;
+import uk.ac.ebi.intact.jami.model.extension.IntactStoichiometry;
 import uk.ac.ebi.intact.jami.model.extension.InteractorAnnotation;
 import uk.ac.ebi.intact.jami.model.extension.InteractorXref;
 import uk.ac.ebi.intact.jami.model.lifecycle.ComplexLifeCycleEvent;
@@ -158,7 +159,7 @@ public class UniplexComplexManager {
     private void setComplexComponents(UniplexCluster uniplexCluster, IntactComplex complex) throws BridgeFailedException, FinderException, SynchronizerException, PersisterException, ProteinException {
         for (String uniprotAc: uniplexCluster.getUniprotAcs()) {
             IntactProtein intactProtein = getIntactProtein(uniprotAc);
-            complex.getParticipants().add(new IntactModelledParticipant(intactProtein));
+            complex.getParticipants().add(new IntactModelledParticipant(intactProtein, new IntactStoichiometry(0)));
         }
     }
 

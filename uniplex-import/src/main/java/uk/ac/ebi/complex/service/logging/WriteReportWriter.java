@@ -1,7 +1,5 @@
 package uk.ac.ebi.complex.service.logging;
 
-import uk.ac.ebi.complex.service.ComplexFinderResult;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
@@ -9,15 +7,10 @@ import java.util.Collection;
 public class WriteReportWriter extends ReportWriter {
 
     public WriteReportWriter(File outputFile, String separator, boolean header) throws IOException {
-        super(outputFile, separator, header);
+        super(outputFile, separator, header, new String[]{ "cluster_ids", "cluster_confidence", "uniprot_acs", "complex_ac" });
     }
 
-    protected void writeHeader() {
-        csvWriter.writeNext(new String[]{ "cluster_ids", "cluster_confidence", "uniprot_acs", "complex_ac" });
-    }
-
-    public void write(ComplexFinderResult.MatchType matchType,
-                      Collection<String> clusterIds,
+    public void write(Collection<String> clusterIds,
                       Integer clusterConfidence,
                       Collection<String> uniprotAcs,
                       String complexAc) throws IOException {

@@ -13,7 +13,6 @@ import uk.ac.ebi.complex.service.ComplexFinderResult;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.ProcessReportWriter;
-import uk.ac.ebi.complex.service.logging.ReportWriter;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.model.UniplexComplex;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
@@ -31,10 +30,10 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
     private final ComplexFinder complexFinder;
     private final FileConfiguration fileConfiguration;
 
-    private ReportWriter exactMatchesReportWriter;
-    private ReportWriter multipleExactMatchesReportWriter;
-    private ReportWriter partialMatchesReportWriter;
-    private ReportWriter noMatchesReportWriter;
+    private ProcessReportWriter exactMatchesReportWriter;
+    private ProcessReportWriter multipleExactMatchesReportWriter;
+    private ProcessReportWriter partialMatchesReportWriter;
+    private ProcessReportWriter noMatchesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
     @Override
@@ -84,7 +83,10 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                                 item.getClusterIds(),
                                 item.getClusterConfidence(),
                                 item.getUniprotAcs(),
-                                complexMatch.getComplexAc());
+                                complexMatch.getComplexAc(),
+                                complexMatch.getMatchingProteins().size(),
+                                complexMatch.getExtraProteinsInComplex().size(),
+                                complexMatch.getProteinMissingInComplex().size());
                     }
                 } else {
                     noMatchesReportWriter.write(
@@ -151,10 +153,15 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();
 
-        this.exactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "exact_matches" + extension), sep, header);
-        this.multipleExactMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "multiple_exact_matches" + extension), sep, header);
-        this.partialMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "partial_matches" + extension), sep, header);
-        this.noMatchesReportWriter = new ProcessReportWriter(new File(reportDirectory, "no_matches" + extension), sep, header);
-        this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "process_errors" + extension), sep, header);
+        this.exactMatchesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "exact_matches" + extension), sep, header, ProcessReportWriter.EXACT_MATCH_HEADER_LINE);
+        this.multipleExactMatchesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "multiple_exact_matches" + extension), sep, header, ProcessReportWriter.EXACT_MATCH_HEADER_LINE);
+        this.partialMatchesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "partial_matches" + extension), sep, header, ProcessReportWriter.PARTIAL_MATCHES_HEADER_LINE);
+        this.noMatchesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "no_matches" + extension), sep, header, ProcessReportWriter.NO_MATCH_HEADER_LINE);
+        this.errorReportWriter = new ErrorsReportWriter(
+                new File(reportDirectory, "process_errors" + extension), sep, header);
     }
 }

@@ -11,7 +11,6 @@ import org.springframework.util.Assert;
 import uk.ac.ebi.complex.service.config.AppProperties;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
-import uk.ac.ebi.complex.service.logging.ReportWriter;
 import uk.ac.ebi.complex.service.logging.WriteReportWriter;
 import uk.ac.ebi.complex.service.manager.UniplexComplexManager;
 import uk.ac.ebi.complex.service.model.UniplexComplex;
@@ -43,8 +42,8 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
 
     private DbSynchronizerStatisticsReporter synchronizerListener;
 
-    private ReportWriter newComplexesReportWriter;
-    private ReportWriter mergedComplexesReportWriter;
+    private WriteReportWriter newComplexesReportWriter;
+    private WriteReportWriter mergedComplexesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
     @Override
@@ -198,14 +197,12 @@ public class UniplexComplexWriter implements ItemWriter<UniplexComplex>, ItemStr
             if (complexesToSave.containsKey(clusterIds)) {
                 if (complex.getExistingComplex() != null) {
                     mergedComplexesReportWriter.write(
-                            null,
                             complex.getCluster().getClusterIds(),
                             complex.getCluster().getClusterConfidence(),
                             complex.getCluster().getUniprotAcs(),
                             complexesToSave.get(clusterIds).getComplexAc());
                 } else {
                     newComplexesReportWriter.write(
-                            null,
                             complex.getCluster().getClusterIds(),
                             complex.getCluster().getClusterConfidence(),
                             complex.getCluster().getUniprotAcs(),

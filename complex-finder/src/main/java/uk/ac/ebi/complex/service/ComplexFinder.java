@@ -43,6 +43,7 @@ public class ComplexFinder {
         Map<String, ComplexFinderResult.PartialMatch<IntactComplex>> partialMatchesMap = new HashMap<>();
 
         for (IntactComplex complex : complexes) {
+            // TODO: should we filter for predicted complexes?
             findComplexMatches(complex, proteins, proteinCacheMap, exactMatchesMap, partialMatchesMap);
         }
 
