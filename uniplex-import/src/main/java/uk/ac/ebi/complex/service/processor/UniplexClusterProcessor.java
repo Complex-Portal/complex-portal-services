@@ -74,10 +74,14 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                 // At the moment we only consider partial matches where the predicted complex is a subset of a curated complex.
                 List<ComplexFinderResult.PartialMatch<IntactComplex>> subsetMatches = complexFinderResult.getPartialMatches()
                         .stream()
-                        .filter(match -> ComplexFinderResult.MatchType.PARTIAL_MATCH_SUBSET_OF_COMPLEX.equals(match.getMatchType()))
+//                        .filter(match -> ComplexFinderResult.MatchType.PARTIAL_MATCH_SUBSET_OF_COMPLEX.equals(match.getMatchType()))
                         .collect(Collectors.toList());
                 if (!subsetMatches.isEmpty()) {
                     for (ComplexFinderResult.PartialMatch<IntactComplex> complexMatch : subsetMatches) {
+                        int totalNumberOfProteins = complexMatch.getMatchingProteins().size() +
+                                complexMatch.getExtraProteinsInComplex().size() +
+                                complexMatch.getProteinMissingInComplex().size();
+                        double similarity = 1d / totalNumberOfProteins * complexMatch.getMatchingProteins().size();
                         partialMatchesReportWriter.write(
                                 complexMatch.getMatchType(),
                                 item.getClusterIds(),
@@ -86,7 +90,8 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                                 complexMatch.getComplexAc(),
                                 complexMatch.getMatchingProteins().size(),
                                 complexMatch.getExtraProteinsInComplex().size(),
-                                complexMatch.getProteinMissingInComplex().size());
+                                complexMatch.getProteinMissingInComplex().size(),
+                                similarity);
                     }
                 } else {
                     noMatchesReportWriter.write(
