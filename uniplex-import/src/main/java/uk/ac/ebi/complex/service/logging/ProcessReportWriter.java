@@ -14,7 +14,7 @@ public class ProcessReportWriter extends ReportWriter {
             "match_type", "cluster_ids", "cluster_confidence", "uniprot_acs", "complex_ac" };
     public static final String[] PARTIAL_MATCHES_HEADER_LINE = new String[]{
             "match_type", "cluster_ids", "cluster_confidence", "uniprot_acs", "complex_ac",
-            "num_proteins_in_common", "num_extra_proteins_in_complex", "num_proteins_missing_in_complex" };
+            "num_proteins_in_common", "num_extra_proteins_in_complex", "num_proteins_missing_in_complex", "similarity" };
 
     public ProcessReportWriter(File outputFile, String separator, boolean header, String[] headerline) throws IOException {
         super(outputFile, separator, header, headerline);
@@ -27,7 +27,8 @@ public class ProcessReportWriter extends ReportWriter {
                       String complexAc,
                       int proteinsInCommon,
                       int extraProteinsInComplex,
-                      int proteinsMissingInComplex) throws IOException {
+                      int proteinsMissingInComplex,
+                      double similarity) throws IOException {
 
         csvWriter.writeNext(new String[]{
                 matchType != null ? matchType.name() : "",
@@ -37,7 +38,8 @@ public class ProcessReportWriter extends ReportWriter {
                 complexAc,
                 Integer.toString(proteinsInCommon),
                 Integer.toString(extraProteinsInComplex),
-                Integer.toString(proteinsMissingInComplex)
+                Integer.toString(proteinsMissingInComplex),
+                Double.toString(similarity)
         });
         flush();
     }
