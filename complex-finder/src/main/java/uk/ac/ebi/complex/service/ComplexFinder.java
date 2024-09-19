@@ -32,7 +32,10 @@ public class ComplexFinder {
     }
 
     public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteins(Collection<String> proteinIds) {
-        Collection<IntactComplex> complexes = getComplexesInvolvingProteins(proteinIds);
+        Collection<IntactComplex> complexes = getComplexesInvolvingProteins(proteinIds)
+                .stream()
+                .filter(complex -> !complex.isPredictedComplex()) // Filter out predicted complexes
+                .collect(Collectors.toList());
 
         Collection<ModelledComparableParticipant> proteins = proteinIds.stream()
                 .map(proteinId -> new ModelledComparableParticipant(proteinId, 1, CvTermUtils.createProteinInteractorType()))
