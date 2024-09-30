@@ -19,6 +19,7 @@ import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -72,10 +73,7 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
                 }
             } else {
                 // At the moment we only consider partial matches where the predicted complex is a subset of a curated complex.
-                List<ComplexFinderResult.PartialMatch<IntactComplex>> subsetMatches = complexFinderResult.getPartialMatches()
-                        .stream()
-//                        .filter(match -> ComplexFinderResult.MatchType.PARTIAL_MATCH_SUBSET_OF_COMPLEX.equals(match.getMatchType()))
-                        .collect(Collectors.toList());
+                List<ComplexFinderResult.PartialMatch<IntactComplex>> subsetMatches = new ArrayList<>(complexFinderResult.getPartialMatches());
                 if (!subsetMatches.isEmpty()) {
                     for (ComplexFinderResult.PartialMatch<IntactComplex> complexMatch : subsetMatches) {
                         int totalNumberOfProteins = complexMatch.getMatchingProteins().size() +
