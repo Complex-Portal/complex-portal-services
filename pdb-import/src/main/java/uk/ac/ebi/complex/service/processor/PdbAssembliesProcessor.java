@@ -7,7 +7,6 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.utils.XrefUtils;
@@ -32,7 +31,6 @@ import java.util.stream.Collectors;
 @Log4j
 @Component
 @RequiredArgsConstructor
-@Transactional(value = "jamiTransactionManager", readOnly = true)
 public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssemblies, ComplexWithAssemblyXrefs>, ItemStream {
 
     private static final String WWPDB_DB_MI = "MI:0805";
