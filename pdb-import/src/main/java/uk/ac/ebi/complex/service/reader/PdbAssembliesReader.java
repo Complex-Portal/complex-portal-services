@@ -41,14 +41,15 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
     @Override
     public ComplexWithAssemblies read() {
         while (complexAcIterator.hasNext()) {
-            IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexAcIterator.next());
-            if (complexAndAssemblies.containsKey(complex.getComplexAc())) {
-                return new ComplexWithAssemblies(complex.getComplexAc(), complexAndAssemblies.get(complex.getComplexAc()));
+            String complexAc = complexAcIterator.next();
+            IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexAc);
+            if (complexAndAssemblies.containsKey(complexAc)) {
+                return new ComplexWithAssemblies(complexAc, complexAndAssemblies.get(complexAc));
             }
 
             if (!XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty() ||
                     !XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty()) {
-                return new ComplexWithAssemblies(complex.getComplexAc(), new HashSet<>());
+                return new ComplexWithAssemblies(complexAc, new HashSet<>());
             }
         }
         return null;
