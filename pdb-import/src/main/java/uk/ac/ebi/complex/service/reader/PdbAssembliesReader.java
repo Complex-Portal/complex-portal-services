@@ -13,6 +13,7 @@ import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.utils.XrefUtils;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.model.ComplexWithAssemblies;
+import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 
@@ -32,6 +33,7 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
     private static final String WWPDB_DB_MI = "MI:0805";
     private static final String WWPDB_DB_NAME = "wwpdb";
 
+    private final IntactDao intactDao;
     private final ComplexService complexService;
     private final FileConfiguration fileConfiguration;
     private final PdbAssembliesFileReader pdbAssembliesFileReader;
@@ -44,6 +46,7 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
         while (complexIterator.hasNext()) {
             Complex complex = complexIterator.next();
             IntactComplex intactComplex = (IntactComplex) complex;
+            intactDao.getComplexDao().refresh(intactComplex);
             String complexAc = intactComplex.getComplexAc();
             if (complexAndAssemblies.containsKey(complexAc)) {
                 return new ComplexWithAssemblies(complexAc, complexAndAssemblies.get(complexAc));
