@@ -61,41 +61,10 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
             } else {
                 Set<String> matchesFound = new HashSet<>();
 
-                for (Xref xref : pdbIdentifiers) {
-                    boolean xrefMatchFound = false;
-                    for (String assembly: item.getAssemblies()) {
-                        if (!matchesFound.contains(assembly)) {
-                            if (xref.getId().equals(assembly)) {
-                                if (xref.getQualifier() != null && xref.getQualifier().getMIIdentifier().equals(Xref.IDENTITY_MI)) {
-                                    xrefsToKeep.add((InteractorXref) xref);
-                                } else {
-                                    xrefsToUpdate.add((InteractorXref) xref);
-                                }
-                                xrefMatchFound = true;
-                                matchesFound.add(assembly);
-                            }
-                        }
-                    }
-                    if (!xrefMatchFound) {
-                        xrefsToRemove.add((InteractorXref) xref);
-                    }
-                }
-
-                for (Xref xref : pdbXrefs) {
-                    boolean xrefMatchFound = false;
-                    for (String assembly: item.getAssemblies()) {
-                        if (!matchesFound.contains(assembly)) {
-                            if (xref.getId().equals(assembly)) {
-                                xrefsToUpdate.add((InteractorXref) xref);
-                                xrefMatchFound = true;
-                                matchesFound.add(assembly);
-                            }
-                        }
-                    }
-                    if (!xrefMatchFound) {
-                        xrefsToRemove.add((InteractorXref) xref);
-                    }
-                }
+                pdbIdentifiers.forEach(xref -> checkIfXrefNeedsUpdateOrRemove(
+                        xref, item.getAssemblies(), matchesFound, xrefsToKeep, xrefsToRemove, xrefsToUpdate));
+                pdbXrefs.forEach(xref -> checkIfXrefNeedsUpdateOrRemove(
+                        xref, item.getAssemblies(), matchesFound, xrefsToKeep, xrefsToRemove, xrefsToUpdate));
 
                 for (String assembly: item.getAssemblies()) {
                     if (!matchesFound.contains(assembly)) {
@@ -161,6 +130,31 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be closed", e);
         }
+    }
+
+    private void checkIfXrefNeedsUpdateOrRemove(
+            Xref xref,
+            Collection<String> assemblies,
+            Set<String> matchesFound,
+            List<InteractorXref> xrefsToKeep,
+            List<InteractorXref> xrefsToRemove,
+            List<InteractorXref> xrefsToUpdate) {
+
+        for (String assembly: assemblies) {
+            if (!matchesFound.contains(assembly)) {
+                if (xref.getId().equals(assembly)) {
+                    if (xref.getQualifier() != null && xref.getQualifier().getMIIdentifier().equals(Xref.IDENTITY_MI)) {
+                        xrefsToKeep.add((InteractorXref) xref);
+                    } else {
+                        xrefsToUpdate.add((InteractorXref) xref);
+                    }
+                    matchesFound.add(assembly);
+                    return;
+                }
+            }
+        }
+
+        xrefsToRemove.add((InteractorXref) xref);
     }
 
     private void initialiseReportWriters() throws IOException {

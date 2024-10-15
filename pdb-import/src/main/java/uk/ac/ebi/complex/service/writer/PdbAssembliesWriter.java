@@ -24,6 +24,7 @@ import uk.ac.ebi.intact.jami.utils.IntactUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -175,42 +176,15 @@ public class PdbAssembliesWriter implements ItemWriter<ComplexWithAssemblyXrefs>
             IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
             try {
                 for (InteractorXref xrefToRemove: item.getXrefsToRemove()) {
-                    for (Xref xref: complex.getXrefs()) {
-                        InteractorXref interactorXref = (InteractorXref) xref;
-                        if (xrefToRemove.getAc().equals(interactorXref.getAc())) {
-                            complex.getXrefs().remove(xref);
-                        }
-                    }
-                    for (Xref xref: complex.getIdentifiers()) {
-                        InteractorXref interactorXref = (InteractorXref) xref;
-                        if (xrefToRemove.getAc().equals(interactorXref.getAc())) {
-                            complex.getXrefs().remove(xref);
-                        }
-                    }
+                    removeXref(complex.getIdentifiers(), xrefToRemove);
+                    removeXref(complex.getXrefs(), xrefToRemove);
                 }
-
                 for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
-                    for (Xref xref: complex.getXrefs()) {
-                        InteractorXref interactorXref = (InteractorXref) xref;
-                        if (xrefToUpdate.getAc().equals(interactorXref.getAc())) {
-                            IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
-                            interactorXref.setQualifier(qualifier);
-                        }
-                    }
-                    for (Xref xref: complex.getIdentifiers()) {
-                        InteractorXref interactorXref = (InteractorXref) xref;
-                        if (xrefToUpdate.getAc().equals(interactorXref.getAc())) {
-                            IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
-                            interactorXref.setQualifier(qualifier);
-                        }
-                    }
+                    updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
+                    updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
                 }
-
                 for (String xrefToAdd: item.getXrefsToAdd()) {
-                    IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, WWPDB_DB_MI);
-                    IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
-                    InteractorXref newXref = new InteractorXref(database, xrefToAdd, qualifier);
-                    complex.getIdentifiers().add(newXref);
+                    addNewXref(complex, xrefToAdd);
                 }
             } catch (Exception e) {
                 log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
@@ -221,6 +195,45 @@ public class PdbAssembliesWriter implements ItemWriter<ComplexWithAssemblyXrefs>
         if (!appProperties.isDryRunMode()) {
             this.complexService.saveOrUpdate(complexesToSave.values());
         }
+    }
+
+    private void removeXref(Collection<Xref> complexXrefs, InteractorXref xrefToRemove) {
+        for (Xref xref: complexXrefs) {
+            InteractorXref interactorXref = (InteractorXref) xref;
+            if (xrefToRemove.getAc().equals(interactorXref.getAc())) {
+                complexXrefs.remove(xref);
+            }
+        }
+    }
+
+    private void updateXrefQualifier(Collection<Xref> complexXrefs, InteractorXref xrefToUpdate) throws CvTermNotFoundException {
+        for (Xref xref: complexXrefs) {
+            InteractorXref interactorXref = (InteractorXref) xref;
+            if (xrefToUpdate.getAc().equals(interactorXref.getAc())) {
+                IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
+                interactorXref.setQualifier(qualifier);
+            }
+        }
+    }
+
+    private void addNewXref(IntactComplex complex, String xrefToAdd) throws CvTermNotFoundException {
+        IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, WWPDB_DB_MI);
+        IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
+        InteractorXref newXref = new InteractorXref(database, xrefToAdd, qualifier);
+        complex.getIdentifiers().add(newXref);
+    }
+
+    private IntactCvTerm findCvTerm(String clazz, String id) throws CvTermNotFoundException {
+        String key = clazz + "_" + id;
+        if (cvTermMap.containsKey(key)) {
+            return cvTermMap.get(key);
+        }
+        IntactCvTerm cvTerm = intactDao.getCvTermDao().getByUniqueIdentifier(id, clazz);
+        if (cvTerm != null) {
+            cvTermMap.put(key, cvTerm);
+            return cvTerm;
+        }
+        throw new CvTermNotFoundException("CV Term not found with class '" + clazz + "' and id '" + id + "'");
     }
 
     private void initialiseReportWriters() throws IOException {
@@ -237,18 +250,5 @@ public class PdbAssembliesWriter implements ItemWriter<ComplexWithAssemblyXrefs>
         String extension = fileConfiguration.getExtension();
 
         this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "write_errors" + extension), separator, header);
-    }
-
-    private IntactCvTerm findCvTerm(String clazz, String id) throws CvTermNotFoundException {
-        String key = clazz + "_" + id;
-        if (cvTermMap.containsKey(key)) {
-            return cvTermMap.get(key);
-        }
-        IntactCvTerm cvTerm = intactDao.getCvTermDao().getByUniqueIdentifier(id, clazz);
-        if (cvTerm != null) {
-            cvTermMap.put(key, cvTerm);
-            return cvTerm;
-        }
-        throw new CvTermNotFoundException("CV Term not found with class '" + clazz + "' and id '" + id + "'");
     }
 }
