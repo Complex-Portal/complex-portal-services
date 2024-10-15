@@ -56,7 +56,7 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
         Assert.notNull(executionContext, "ExecutionContext must not be null");
 
         try {
-            File inputFile = fileConfiguration.outputPath().toFile();
+            File inputFile = new File(fileConfiguration.getInputFileName());
             complexAndAssemblies = pdbAssembliesFileReader.readAssembliesFromFile(inputFile);
 
             List<IntactComplex> complexes = intactDao.getComplexDao().getAll();
