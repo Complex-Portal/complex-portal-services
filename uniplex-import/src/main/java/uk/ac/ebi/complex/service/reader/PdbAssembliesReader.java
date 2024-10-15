@@ -59,8 +59,8 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                 return new ComplexWithAssemblies(complexAc, complexAndAssemblies.get(complexAc));
             }
 
-            if (!XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty() ||
-                    !XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty()) {
+            if (!XrefUtils.collectAllXrefsHavingDatabase(intactComplex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty() ||
+                    !XrefUtils.collectAllXrefsHavingDatabase(intactComplex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty()) {
                 return new ComplexWithAssemblies(complexAc, new HashSet<>());
             }
         }
