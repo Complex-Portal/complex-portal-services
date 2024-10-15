@@ -41,7 +41,7 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
 
 //    private ProcessReportWriter noChangesReportWriter;
 //    private ProcessReportWriter changesReportWriter;
-    private ErrorsReportWriter errorReportWriter;
+//    private ErrorsReportWriter errorReportWriter;
 
     @Override
     public ComplexWithAssemblyXrefs process(ComplexWithAssemblies item) throws Exception {
@@ -94,7 +94,7 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
 
         } catch (Exception e) {
             log.error("Error processing assemblies for complex: " + item.getComplexId(), e);
-            errorReportWriter.write(item.getComplexId(), e.getMessage());
+//            errorReportWriter.write(item.getComplexId(), e.getMessage());
             return null;
         }
     }
@@ -112,24 +112,24 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
-        try {
-            this.noChangesReportWriter.flush();
-            this.changesReportWriter.flush();
-            this.errorReportWriter.flush();
-        } catch (IOException e) {
-            throw new ItemStreamException("Report file writer could not be flushed", e);
-        }
+//        try {
+//            this.noChangesReportWriter.flush();
+//            this.changesReportWriter.flush();
+//            this.errorReportWriter.flush();
+//        } catch (IOException e) {
+//            throw new ItemStreamException("Report file writer could not be flushed", e);
+//        }
     }
 
     @Override
     public void close() throws ItemStreamException {
-        try {
-            this.noChangesReportWriter.close();
-            this.changesReportWriter.close();
-            this.errorReportWriter.close();
-        } catch (IOException e) {
-            throw new ItemStreamException("Report file writer could not be closed", e);
-        }
+//        try {
+//            this.noChangesReportWriter.close();
+//            this.changesReportWriter.close();
+//            this.errorReportWriter.close();
+//        } catch (IOException e) {
+//            throw new ItemStreamException("Report file writer could not be closed", e);
+//        }
     }
 
     private void checkIfXrefNeedsUpdateOrRemove(
@@ -174,7 +174,7 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
 //                new File(reportDirectory, "no_changes_needed" + extension), sep, header, ProcessReportWriter.NO_CHANGES_HEADER_LINE);
 //        this.changesReportWriter = new ProcessReportWriter(
 //                new File(reportDirectory, "changes_needed" + extension), sep, header, ProcessReportWriter.CHANGES_HEADER_LINE);
-        this.errorReportWriter = new ErrorsReportWriter(
-                new File(reportDirectory, "process_errors" + extension), sep, header);
+//        this.errorReportWriter = new ErrorsReportWriter(
+//                new File(reportDirectory, "process_errors" + extension), sep, header);
     }
 }
