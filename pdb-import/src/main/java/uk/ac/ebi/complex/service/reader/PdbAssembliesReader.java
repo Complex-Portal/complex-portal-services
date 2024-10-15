@@ -69,7 +69,7 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
             List<String> complexAcs = intactDao.getComplexDao().getAll().stream().map(IntactComplex::getComplexAc).collect(Collectors.toList());
 
             log.info("DEBUG: Fetch " + complexAcs.size() + " complexes from DB");
-            this.complexIterator = complexAcs.iterator();
+            this.complexAcIterator = complexAcs.iterator();
         } catch (IOException e) {
             throw new ItemStreamException("Input file could not be read: " + fileConfiguration.getInputFileName(), e);
         }
