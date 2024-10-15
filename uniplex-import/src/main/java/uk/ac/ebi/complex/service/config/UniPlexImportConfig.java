@@ -32,11 +32,16 @@ import psidev.psi.mi.jami.batch.SimpleJobListener;
 import psidev.psi.mi.jami.batch.SimpleJobRegistry;
 import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
 import uk.ac.ebi.complex.service.ComplexFinder;
+import uk.ac.ebi.complex.service.model.ComplexWithAssemblies;
+import uk.ac.ebi.complex.service.model.ComplexWithAssemblyXrefs;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.model.UniplexComplex;
+import uk.ac.ebi.complex.service.processor.PdbAssembliesProcessor;
 import uk.ac.ebi.complex.service.processor.UniplexClusterProcessor;
 import uk.ac.ebi.complex.service.processor.UniplexFileProcessorTasklet;
+import uk.ac.ebi.complex.service.reader.PdbAssembliesReader;
 import uk.ac.ebi.complex.service.reader.UniplexFileReader;
+import uk.ac.ebi.complex.service.writer.PdbAssembliesWriter;
 import uk.ac.ebi.complex.service.writer.UniplexComplexWriter;
 import uk.ac.ebi.intact.jami.context.IntactConfiguration;
 import uk.ac.ebi.intact.jami.context.UserContext;
@@ -231,16 +236,16 @@ public class UniPlexImportConfig {
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
-            UniplexFileReader uniplexFileReader,
-            UniplexClusterProcessor uniplexClusterProcessor,
-            UniplexComplexWriter uniplexComplexWriter) throws Exception {
+            PdbAssembliesReader uniplexFileReader,
+            PdbAssembliesProcessor uniplexClusterProcessor,
+            PdbAssembliesWriter uniplexComplexWriter) throws Exception {
 
         StepBuilder basicStep = basicStepBuilder(
                 "uniplexClusterImportStep",
                 jamiTransactionManager,
                 basicBatchJobRepository);
 
-        return new SimpleStepBuilder<UniplexCluster, UniplexComplex>(basicStep)
+        return new SimpleStepBuilder<ComplexWithAssemblies, ComplexWithAssemblyXrefs>(basicStep)
                 .chunk(50)
                 .reader(uniplexFileReader)
                 .processor(uniplexClusterProcessor)
@@ -254,29 +259,29 @@ public class UniPlexImportConfig {
                 .build();
     }
 
-    @Bean
-    public Step processUniplexFile(
-            PlatformTransactionManager jamiTransactionManager,
-            JobRepositoryFactoryBean basicBatchJobRepository,
-            UniplexFileProcessorTasklet uniplexFileProcessorTasklet) throws Exception {
-
-        return basicStepBuilder("processUniplexFile", jamiTransactionManager, basicBatchJobRepository)
-                .tasklet(uniplexFileProcessorTasklet)
-                .build();
-    }
+//    @Bean
+//    public Step processUniplexFile(
+//            PlatformTransactionManager jamiTransactionManager,
+//            JobRepositoryFactoryBean basicBatchJobRepository,
+//            UniplexFileProcessorTasklet uniplexFileProcessorTasklet) throws Exception {
+//
+//        return basicStepBuilder("processUniplexFile", jamiTransactionManager, basicBatchJobRepository)
+//                .tasklet(uniplexFileProcessorTasklet)
+//                .build();
+//    }
 
     @Bean
     public Job uniplexClusterImport(
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
-            @Qualifier("processUniplexFile") Step processUniplexFile,
+//            @Qualifier("processUniplexFile") Step processUniplexFile,
             @Qualifier("uniplexClusterImportStep") Step importStep) throws Exception {
 
         return new JobBuilder("uniplexClusterImport")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
-                .start(processUniplexFile)
-                .next(importStep)
+//                .start(processUniplexFile)
+                .start(importStep)
                 .build();
     }
 
