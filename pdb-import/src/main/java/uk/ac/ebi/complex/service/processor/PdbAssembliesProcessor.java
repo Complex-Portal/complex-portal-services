@@ -19,6 +19,7 @@ import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.model.extension.InteractorXref;
 
+import javax.transaction.Transactional;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 @Log4j
 @Component
 @RequiredArgsConstructor
+@Transactional
 public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssemblies, ComplexWithAssemblyXrefs>, ItemStream {
 
     private static final String WWPDB_DB_MI = "MI:0805";

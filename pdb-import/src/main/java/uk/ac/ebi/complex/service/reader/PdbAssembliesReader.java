@@ -15,6 +15,7 @@ import uk.ac.ebi.complex.service.model.ComplexWithAssemblies;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 
+import javax.transaction.Transactional;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
@@ -25,6 +26,7 @@ import java.util.Set;
 @Log4j
 @Component
 @RequiredArgsConstructor
+@Transactional
 public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, ItemStream {
 
     private static final String WWPDB_DB_MI = "MI:0805";
