@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Log4j
 @Component
@@ -34,13 +35,13 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
     private final FileConfiguration fileConfiguration;
     private final PdbAssembliesFileReader pdbAssembliesFileReader;
 
-    private Iterator<IntactComplex> complexIterator;
+    private Iterator<String> complexAcIterator;
     private Map<String, Set<String>> complexAndAssemblies;
 
     @Override
     public ComplexWithAssemblies read() {
-        while (complexIterator.hasNext()) {
-            IntactComplex complex = complexIterator.next();
+        while (complexAcIterator.hasNext()) {
+            IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexAcIterator.next());
             if (complexAndAssemblies.containsKey(complex.getComplexAc())) {
                 return new ComplexWithAssemblies(complex.getComplexAc(), complexAndAssemblies.get(complex.getComplexAc()));
             }
@@ -65,10 +66,10 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
             String complexId = complexAndAssemblies.keySet().iterator().next();
             log.info("DEBUG: First assembly: complex id = " + complexId + " , assemblies = " + String.join("|", complexAndAssemblies.get(complexId)));
 
-            List<IntactComplex> complexes = intactDao.getComplexDao().getAll();
+            List<String> complexAcs = intactDao.getComplexDao().getAll().stream().map(IntactComplex::getComplexAc).collect(Collectors.toList());
 
-            log.info("DEBUG: Fetch " + complexes.size() + " complexes from DB");
-            this.complexIterator = complexes.iterator();
+            log.info("DEBUG: Fetch " + complexAcs.size() + " complexes from DB");
+            this.complexIterator = complexAcs.iterator();
         } catch (IOException e) {
             throw new ItemStreamException("Input file could not be read: " + fileConfiguration.getInputFileName(), e);
         }
