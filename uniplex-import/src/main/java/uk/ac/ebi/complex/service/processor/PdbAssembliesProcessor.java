@@ -7,6 +7,8 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.utils.XrefUtils;
@@ -44,6 +46,7 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
 //    private ErrorsReportWriter errorReportWriter;
 
     @Override
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS, value = "jamiTransactionManager")
     public ComplexWithAssemblyXrefs process(ComplexWithAssemblies item) throws Exception {
         try {
             IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());

@@ -11,6 +11,8 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.utils.XrefUtils;
@@ -47,6 +49,7 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
     private Map<String, Set<String>> complexAndAssemblies;
 
     @Override
+    @Transactional(readOnly = true, propagation = Propagation.SUPPORTS, value = "jamiTransactionManager")
     public ComplexWithAssemblies read() {
         while (complexIterator.hasNext()) {
             Complex complex = complexIterator.next();
