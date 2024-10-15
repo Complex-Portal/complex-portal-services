@@ -1,6 +1,7 @@
 package uk.ac.ebi.complex.service.reader;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemStream;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@Log4j
 @Component
 @RequiredArgsConstructor
 public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, ItemStream {
@@ -59,7 +61,13 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
             File inputFile = new File(fileConfiguration.getInputFileName());
             complexAndAssemblies = pdbAssembliesFileReader.readAssembliesFromFile(inputFile);
 
+            log.info("DEBUG: Read " + complexAndAssemblies.size() + " assemblies from " + inputFile.getAbsolutePath());
+            String complexId = complexAndAssemblies.keySet().iterator().next();
+            log.info("DEBUG: First assembly: complex id = " + complexId + " , assemblies = " + String.join("|", complexAndAssemblies.get(complexId)));
+
             List<IntactComplex> complexes = intactDao.getComplexDao().getAll();
+
+            log.info("DEBUG: Fetch " + complexes.size() + " complexes from DB");
             this.complexIterator = complexes.iterator();
         } catch (IOException e) {
             throw new ItemStreamException("Input file could not be read: " + fileConfiguration.getInputFileName(), e);
