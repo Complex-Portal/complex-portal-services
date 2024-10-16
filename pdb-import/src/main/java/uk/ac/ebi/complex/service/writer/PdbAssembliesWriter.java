@@ -90,14 +90,7 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
     }
 
     private void removeXref(Collection<Xref> complexXrefs, InteractorXref xrefToRemove) {
-        for (Xref xref: complexXrefs) {
-            if (xref instanceof InteractorXref) {
-                InteractorXref interactorXref = (InteractorXref) xref;
-                if (xrefToRemove.getAc().equals(interactorXref.getAc())) {
-                    complexXrefs.remove(xref);
-                }
-            }
-        }
+        complexXrefs.remove(xrefToRemove);
     }
 
     private void updateXrefQualifier(Collection<Xref> complexXrefs, InteractorXref xrefToUpdate) throws CvTermNotFoundException {
