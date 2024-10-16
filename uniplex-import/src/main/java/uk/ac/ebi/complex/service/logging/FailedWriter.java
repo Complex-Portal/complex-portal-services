@@ -16,7 +16,7 @@ public class FailedWriter extends ReportWriter {
             Collection<String> problematicAcs,
             Collection<String> reasons) throws IOException {
 
-        csvWriter.writeNext(new String[]{
+        writeLine(new String[]{
                 String.join(" ", clusterIds),
                 String.join(" ", participantIds),
                 String.join(" ", problematicAcs),

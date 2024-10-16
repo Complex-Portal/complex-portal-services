@@ -30,7 +30,7 @@ public class ProcessReportWriter extends ReportWriter {
                       int proteinsMissingInComplex,
                       double similarity) throws IOException {
 
-        csvWriter.writeNext(new String[]{
+        writeLine(new String[]{
                 matchType != null ? matchType.name() : "",
                 String.join(" ", clusterIds),
                 clusterConfidence.toString(),
@@ -50,7 +50,7 @@ public class ProcessReportWriter extends ReportWriter {
                       Collection<String> uniprotAcs,
                       String complexAc) throws IOException {
 
-        csvWriter.writeNext(new String[]{
+        writeLine(new String[]{
                 matchType != null ? matchType.name() : "",
                 String.join(" ", clusterIds),
                 clusterConfidence.toString(),
@@ -61,7 +61,7 @@ public class ProcessReportWriter extends ReportWriter {
     }
 
     public void write(Collection<String> clusterIds, Integer clusterConfidence, Collection<String> uniprotAcs) throws IOException {
-        csvWriter.writeNext(new String[]{
+        writeLine(new String[]{
                 String.join(" ", clusterIds),
                 clusterConfidence.toString(),
                 String.join(" ", uniprotAcs)

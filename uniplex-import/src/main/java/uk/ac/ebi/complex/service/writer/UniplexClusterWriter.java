@@ -4,7 +4,7 @@ import com.opencsv.CSVWriterBuilder;
 import com.opencsv.ICSVWriter;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
-import uk.ac.ebi.complex.service.config.FileConfiguration;
+import uk.ac.ebi.complex.service.config.UniplexFileConfiguration;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 
 import java.io.BufferedWriter;
@@ -17,7 +17,7 @@ import java.util.Collection;
 @AllArgsConstructor
 public class UniplexClusterWriter {
 
-    private final FileConfiguration fileConfiguration;
+    private final UniplexFileConfiguration fileConfiguration;
 
     public void writeClustersToFile(Collection<UniplexCluster> clusters) throws IOException {
         File outputFile = fileConfiguration.outputPath().toFile();

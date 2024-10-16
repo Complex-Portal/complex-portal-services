@@ -3,8 +3,6 @@ package uk.ac.ebi.complex.service.processor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -31,7 +29,7 @@ import java.util.stream.Collectors;
 @Log4j
 @Component
 @RequiredArgsConstructor
-public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssemblies, ComplexWithAssemblyXrefs>, ItemStream {
+public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAssemblies, ComplexWithAssemblyXrefs> {
 
     private static final String WWPDB_DB_MI = "MI:0805";
     private static final String WWPDB_DB_NAME = "wwpdb";
@@ -100,16 +98,6 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
     }
 
     @Override
-    public void open(ExecutionContext executionContext) throws ItemStreamException {
-        Assert.notNull(executionContext, "ExecutionContext must not be null");
-        try {
-            initialiseReportWriters();
-        } catch (IOException e) {
-            throw new ItemStreamException("Report file  writer could not be opened", e);
-        }
-    }
-
-    @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
         try {
@@ -143,7 +131,7 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
         for (String assembly: assemblies) {
             if (!matchesFound.contains(assembly)) {
                 if (xref.getId().equals(assembly)) {
-                    if (xref.getQualifier() != null && xref.getQualifier().getMIIdentifier().equals(Xref.IDENTITY_MI)) {
+                    if (xref.getQualifier() != null && Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
                         xrefsToKeep.add((InteractorXref) xref);
                     } else {
                         xrefsToUpdate.add((InteractorXref) xref);
@@ -157,15 +145,16 @@ public class PdbAssembliesProcessor implements ItemProcessor<ComplexWithAssembli
         xrefsToRemove.add((InteractorXref) xref);
     }
 
-    private void initialiseReportWriters() throws IOException {
-        File reportDirectory = new File(fileConfiguration.getReportDirectory());
-        if (!reportDirectory.exists()) {
-            reportDirectory.mkdirs();
-        }
-        if (!reportDirectory.isDirectory()) {
-            throw new IOException("The reports directory has to be a directory: " + fileConfiguration.getReportDirectory());
-        }
+    @Override
+    protected FileConfiguration getFileConfiguration() {
+        return fileConfiguration;
+    }
 
+    @Override
+    protected void initialiseReportWriters() throws IOException {
+        super.initialiseReportWriters();
+
+        File reportDirectory = new File(fileConfiguration.getReportDirectory());
         String sep = fileConfiguration.getSeparator();
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();

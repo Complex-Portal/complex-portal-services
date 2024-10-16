@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public abstract class ReportWriter {
 
-    protected final ICSVWriter csvWriter;
+    private final ICSVWriter csvWriter;
 
     public ReportWriter(File outputFile, String separator, boolean header, String[] headerLine) throws IOException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
@@ -20,12 +20,12 @@ public abstract class ReportWriter {
                 .build();
 
         if (header) {
-            writeHeader(headerLine);
+            writeLine(headerLine);
         }
     }
 
-    private void writeHeader(String[] headerLine) {
-        csvWriter.writeNext(headerLine);
+    protected void writeLine(String[] line) {
+        csvWriter.writeNext(line);
     }
 
     public void flush() throws IOException {

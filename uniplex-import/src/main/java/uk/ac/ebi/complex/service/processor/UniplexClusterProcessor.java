@@ -3,14 +3,13 @@ package uk.ac.ebi.complex.service.processor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import uk.ac.ebi.complex.service.ComplexFinder;
 import uk.ac.ebi.complex.service.ComplexFinderResult;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
+import uk.ac.ebi.complex.service.config.UniplexFileConfiguration;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.ProcessReportWriter;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
@@ -26,10 +25,10 @@ import java.util.stream.Collectors;
 @Log4j
 @Component
 @RequiredArgsConstructor
-public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, UniplexComplex>, ItemStream {
+public class UniplexClusterProcessor extends AbstractBatchProcessor<UniplexCluster, UniplexComplex> {
 
     private final ComplexFinder complexFinder;
-    private final FileConfiguration fileConfiguration;
+    private final UniplexFileConfiguration fileConfiguration;
 
     private ProcessReportWriter exactMatchesReportWriter;
     private ProcessReportWriter multipleExactMatchesReportWriter;
@@ -107,16 +106,6 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
     }
 
     @Override
-    public void open(ExecutionContext executionContext) throws ItemStreamException {
-        Assert.notNull(executionContext, "ExecutionContext must not be null");
-        try {
-            initialiseReportWriters();
-        } catch (IOException e) {
-            throw new ItemStreamException("Report file  writer could not be opened", e);
-        }
-    }
-
-    @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
         try {
@@ -143,15 +132,16 @@ public class UniplexClusterProcessor implements ItemProcessor<UniplexCluster, Un
         }
     }
 
-    private void initialiseReportWriters() throws IOException {
-        File reportDirectory = new File(fileConfiguration.getReportDirectory());
-        if (!reportDirectory.exists()) {
-            reportDirectory.mkdirs();
-        }
-        if (!reportDirectory.isDirectory()) {
-            throw new IOException("The reports directory has to be a directory: " + fileConfiguration.getReportDirectory());
-        }
+    @Override
+    protected FileConfiguration getFileConfiguration() {
+        return fileConfiguration;
+    }
 
+    @Override
+    protected void initialiseReportWriters() throws IOException {
+        super.initialiseReportWriters();
+
+        File reportDirectory = new File(fileConfiguration.getReportDirectory());
         String sep = fileConfiguration.getSeparator();
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();

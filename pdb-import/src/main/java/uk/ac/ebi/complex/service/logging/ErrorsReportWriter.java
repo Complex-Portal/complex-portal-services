@@ -10,7 +10,7 @@ public class ErrorsReportWriter extends ReportWriter {
     }
 
     public void write(String complexId, String errorMessage) throws IOException {
-        csvWriter.writeNext(new String[]{ complexId, errorMessage });
+        writeLine(new String[]{ complexId, errorMessage });
         flush();
     }
 }

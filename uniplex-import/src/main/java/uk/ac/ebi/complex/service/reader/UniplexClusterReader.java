@@ -6,7 +6,7 @@ import com.opencsv.CSVReaderBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Component;
-import uk.ac.ebi.complex.service.config.FileConfiguration;
+import uk.ac.ebi.complex.service.config.UniplexFileConfiguration;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 
 import java.io.*;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UniplexClusterReader {
 
-    private final FileConfiguration fileConfiguration;
+    private final UniplexFileConfiguration fileConfiguration;
 
     public Collection<UniplexCluster> readClustersFromFile(File inputFile) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(inputFile));

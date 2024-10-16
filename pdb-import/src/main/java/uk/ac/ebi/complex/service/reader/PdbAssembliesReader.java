@@ -44,7 +44,6 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
         while (complexIterator.hasNext()) {
             Complex complex = complexIterator.next();
             IntactComplex intactComplex = (IntactComplex) intactDao.getEntityManager().merge(complex);
-//            IntactComplex intactComplex = intactDao.getComplexDao().getByAc(((IntactComplex) complex).getAc());
             String complexAc = intactComplex.getComplexAc();
             if (complexAndAssemblies.containsKey(complexAc)) {
                 return new ComplexWithAssemblies(complexAc, complexAndAssemblies.get(complexAc));

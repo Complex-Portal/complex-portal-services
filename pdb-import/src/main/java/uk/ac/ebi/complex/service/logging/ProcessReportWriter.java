@@ -18,7 +18,7 @@ public class ProcessReportWriter extends ReportWriter {
     public void write(String complexId,
                       Collection<String> assemblies) throws IOException {
 
-        csvWriter.writeNext(new String[]{
+        writeLine(new String[]{
                 complexId,
                 String.join(" ", assemblies)
         });
@@ -32,7 +32,7 @@ public class ProcessReportWriter extends ReportWriter {
                       Collection<String> assembliesToRemove,
                       Collection<String> assembliesToUpdate) throws IOException {
 
-        csvWriter.writeNext(new String[]{
+        writeLine(new String[]{
                 complexId,
                 String.join(" ", assemblies),
                 String.join(" ", assembliesToKeep),

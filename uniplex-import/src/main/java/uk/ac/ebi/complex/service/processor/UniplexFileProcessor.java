@@ -2,7 +2,7 @@ package uk.ac.ebi.complex.service.processor;
 
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Component;
-import uk.ac.ebi.complex.service.config.FileConfiguration;
+import uk.ac.ebi.complex.service.config.UniplexFileConfiguration;
 import uk.ac.ebi.complex.service.logging.FailedWriter;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 import uk.ac.ebi.complex.service.reader.UniplexClusterReader;
@@ -27,14 +27,14 @@ public class UniplexFileProcessor {
     private final static int NUMBER_OF_COMPONENTS_LIMIT = 100;
     private final static String COMPLEX_TOO_LARGE_ERROR = "Complex is too large, number of components = %d";
 
-    private final FileConfiguration fileConfiguration;
+    private final UniplexFileConfiguration fileConfiguration;
     private final UniplexClusterReader uniplexClusterReader;
     private final UniplexClusterWriter uniplexClusterWriter;
     private final UniProtMappingService uniProtMappingService;
 
     private FailedWriter ignoredReportWriter;
 
-    public UniplexFileProcessor(FileConfiguration fileConfiguration,
+    public UniplexFileProcessor(UniplexFileConfiguration fileConfiguration,
                                 UniplexClusterReader uniplexClusterReader,
                                 UniplexClusterWriter uniplexClusterWriter,
                                 UniProtMappingService uniProtMappingService) throws IOException {
@@ -170,7 +170,7 @@ public class UniplexFileProcessor {
             System.exit(1);
         }
 
-        FileConfiguration c = FileConfiguration.builder()
+        UniplexFileConfiguration c = UniplexFileConfiguration.builder()
                 .inputFileName(args[0])
                 .outputFileName(args[1])
                 .reportDirectory(args[2])

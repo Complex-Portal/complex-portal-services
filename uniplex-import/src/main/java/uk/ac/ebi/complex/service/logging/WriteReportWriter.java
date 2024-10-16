@@ -15,7 +15,7 @@ public class WriteReportWriter extends ReportWriter {
                       Collection<String> uniprotAcs,
                       String complexAc) throws IOException {
 
-        csvWriter.writeNext(new String[]{
+        writeLine(new String[]{
                 String.join(" ", clusterIds),
                 clusterConfidence.toString(),
                 String.join(" ", uniprotAcs),

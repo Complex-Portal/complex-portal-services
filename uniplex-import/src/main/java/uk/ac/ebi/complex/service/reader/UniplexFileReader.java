@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.*;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
-import uk.ac.ebi.complex.service.config.FileConfiguration;
+import uk.ac.ebi.complex.service.config.UniplexFileConfiguration;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
 
 import java.io.File;
@@ -18,7 +18,7 @@ public class UniplexFileReader implements ItemReader<UniplexCluster>, ItemStream
 
     private static final String COUNT_OPTION = "cluster_count";
 
-    private final FileConfiguration fileConfiguration;
+    private final UniplexFileConfiguration fileConfiguration;
 
     private final UniplexClusterReader uniplexClusterReader;
 

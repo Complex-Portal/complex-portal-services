@@ -11,7 +11,7 @@ public class ErrorsReportWriter extends ReportWriter {
     }
 
     public void write(Collection<String> clusterIds, String errorMessage) throws IOException {
-        csvWriter.writeNext(new String[]{ String.join(" ", clusterIds), errorMessage });
+        writeLine(new String[]{ String.join(" ", clusterIds), errorMessage });
         flush();
     }
 }
