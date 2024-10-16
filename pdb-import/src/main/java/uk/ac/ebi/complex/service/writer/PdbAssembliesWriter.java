@@ -72,8 +72,8 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
                     removeXref(complex.getXrefs(), xrefToRemove);
                 }
                 for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
-                    updateXrefQualifier(item.getComplexId(), complex.getIdentifiers(), xrefToUpdate);
-                    updateXrefQualifier(item.getComplexId(), complex.getXrefs(), xrefToUpdate);
+                    updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
+                    updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
                 }
                 for (String xrefToAdd: item.getXrefsToAdd()) {
                     addNewXref(complex, xrefToAdd);
@@ -91,26 +91,25 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
 
     private void removeXref(Collection<Xref> complexXrefs, InteractorXref xrefToRemove) {
         for (Xref xref: complexXrefs) {
-            InteractorXref interactorXref = (InteractorXref) xref;
-            if (xrefToRemove.getAc().equals(interactorXref.getAc())) {
-                complexXrefs.remove(xref);
+            if (xref instanceof InteractorXref) {
+                InteractorXref interactorXref = (InteractorXref) xref;
+                if (xrefToRemove.getAc().equals(interactorXref.getAc())) {
+                    complexXrefs.remove(xref);
+                }
             }
         }
     }
 
-    private void updateXrefQualifier(String complexId, Collection<Xref> complexXrefs, InteractorXref xrefToUpdate) throws CvTermNotFoundException {
-            for (Xref xref : complexXrefs) {
-                try {
-                    InteractorXref interactorXref = (InteractorXref) xref;
-                    if (xrefToUpdate.getAc().equals(interactorXref.getAc())) {
-                        IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
-                        interactorXref.setQualifier(qualifier);
-                    }
-                } catch (Exception e) {
-                    log.error("Error updating xref xrefs for complex id: " + complexId + " and xref id: " + xref.getId(), e);
-                    throw e;
+    private void updateXrefQualifier(Collection<Xref> complexXrefs, InteractorXref xrefToUpdate) throws CvTermNotFoundException {
+        for (Xref xref : complexXrefs) {
+            if (xref instanceof InteractorXref) {
+                InteractorXref interactorXref = (InteractorXref) xref;
+                if (xrefToUpdate.getAc().equals(interactorXref.getAc())) {
+                    IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
+                    interactorXref.setQualifier(qualifier);
                 }
             }
+        }
     }
 
     private void addNewXref(IntactComplex complex, String xrefToAdd) throws CvTermNotFoundException {
