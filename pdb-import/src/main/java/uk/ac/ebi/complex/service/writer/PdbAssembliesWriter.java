@@ -42,51 +42,56 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
     private ErrorsReportWriter errorReportWriter;
 
     @Override
+    public void open(ExecutionContext executionContext) throws ItemStreamException {
+//        super.open(executionContext);
+    }
+
+    @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
-        super.update(executionContext);
-        try {
-            this.errorReportWriter.flush();
-        } catch (IOException e) {
-            throw new ItemStreamException("Report file writer could not be flushed", e);
-        }
+//        super.update(executionContext);
+//        try {
+//            this.errorReportWriter.flush();
+//        } catch (IOException e) {
+//            throw new ItemStreamException("Report file writer could not be flushed", e);
+//        }
     }
 
     @Override
     public void close() throws ItemStreamException {
-        super.close();
-        try {
-            this.errorReportWriter.close();
-        } catch (IOException e) {
-            throw new ItemStreamException("Report file writer could not be closed", e);
-        }
+//        super.close();
+//        try {
+//            this.errorReportWriter.close();
+//        } catch (IOException e) {
+//            throw new ItemStreamException("Report file writer could not be closed", e);
+//        }
     }
 
     @Override
     public void write(List<? extends ComplexWithAssemblyXrefs> items) throws Exception {
-        Map<String, IntactComplex> complexesToSave = new HashMap<>();
-        for (ComplexWithAssemblyXrefs item: items) {
-            IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
-            try {
-                for (InteractorXref xrefToRemove: item.getXrefsToRemove()) {
-                    removeXref(complex.getIdentifiers(), xrefToRemove);
-                    removeXref(complex.getXrefs(), xrefToRemove);
-                }
-                for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
-                    updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
-                    updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
-                }
-                for (String xrefToAdd: item.getXrefsToAdd()) {
-                    addNewXref(complex, xrefToAdd);
-                }
-            } catch (Exception e) {
-                log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
-                errorReportWriter.write(item.getComplexId(), e.getMessage());
-            }
-        }
-
-        if (!appProperties.isDryRunMode()) {
-            this.complexService.saveOrUpdate(complexesToSave.values());
-        }
+//        Map<String, IntactComplex> complexesToSave = new HashMap<>();
+//        for (ComplexWithAssemblyXrefs item: items) {
+//            IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
+//            try {
+//                for (InteractorXref xrefToRemove: item.getXrefsToRemove()) {
+//                    removeXref(complex.getIdentifiers(), xrefToRemove);
+//                    removeXref(complex.getXrefs(), xrefToRemove);
+//                }
+//                for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
+//                    updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
+//                    updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
+//                }
+//                for (String xrefToAdd: item.getXrefsToAdd()) {
+//                    addNewXref(complex, xrefToAdd);
+//                }
+//            } catch (Exception e) {
+//                log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
+//                errorReportWriter.write(item.getComplexId(), e.getMessage());
+//            }
+//        }
+//
+//        if (!appProperties.isDryRunMode()) {
+//            this.complexService.saveOrUpdate(complexesToSave.values());
+//        }
     }
 
     private void removeXref(Collection<Xref> complexXrefs, InteractorXref xrefToRemove) {
