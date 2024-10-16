@@ -50,7 +50,6 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             Collection<Xref> pdbIdentifiers = XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME);
             Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(complex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME);
 
-            List<InteractorXref> xrefsToKeep = new ArrayList<>();
             List<String> xrefsToAdd = new ArrayList<>();
             List<InteractorXref> xrefsToRemove = new ArrayList<>();
             List<InteractorXref> xrefsToUpdate = new ArrayList<>();
@@ -62,9 +61,9 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                 Set<String> matchesFound = new HashSet<>();
 
                 pdbIdentifiers.forEach(xref -> checkIfXrefNeedsUpdateOrRemove(
-                        xref, item.getAssemblies(), matchesFound, xrefsToKeep, xrefsToRemove, xrefsToUpdate));
+                        xref, item.getAssemblies(), matchesFound, xrefsToRemove, xrefsToUpdate));
                 pdbXrefs.forEach(xref -> checkIfXrefNeedsUpdateOrRemove(
-                        xref, item.getAssemblies(), matchesFound, xrefsToKeep, xrefsToRemove, xrefsToUpdate));
+                        xref, item.getAssemblies(), matchesFound, xrefsToRemove, xrefsToUpdate));
 
                 for (String assembly: item.getAssemblies()) {
                     if (!matchesFound.contains(assembly)) {
@@ -89,7 +88,6 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                 changesReportWriter.write(
                         item.getComplexId(),
                         item.getAssemblies(),
-                        xrefsToKeep.stream().map(InteractorXref::getId).collect(Collectors.toList()),
                         xrefsToAdd,
                         xrefsToRemove.stream().map(InteractorXref::getId).collect(Collectors.toList()),
                         xrefsToUpdate.stream()
@@ -99,7 +97,6 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
 
             return new ComplexWithAssemblyXrefs(
                     item.getComplexId(),
-                    xrefsToKeep,
                     xrefsToAdd,
                     xrefsToRemove,
                     xrefsToUpdate);
@@ -138,16 +135,13 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             Xref xref,
             Collection<String> assemblies,
             Set<String> matchesFound,
-            List<InteractorXref> xrefsToKeep,
             List<InteractorXref> xrefsToRemove,
             List<InteractorXref> xrefsToUpdate) {
 
         for (String assembly: assemblies) {
             if (!matchesFound.contains(assembly)) {
                 if (xref.getId().equals(assembly)) {
-                    if (xref.getQualifier() != null && Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
-                        xrefsToKeep.add((InteractorXref) xref);
-                    } else {
+                    if (xref.getQualifier() == null || !Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
                         xrefsToUpdate.add((InteractorXref) xref);
                     }
                     matchesFound.add(assembly);
@@ -176,9 +170,9 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
         this.noChangesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "no_changes_needed" + extension), sep, header, ProcessReportWriter.NO_CHANGES_HEADER_LINE);
         this.complexesMissingAssembliesReportWriter = new ProcessReportWriter(
-                new File(reportDirectory, "complexes_missing_assemblies" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_ADD);
+                new File(reportDirectory, "complexes_missing_xrefs" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_ADD);
         this.complexesWithExtraAssembliesReportWriter = new ProcessReportWriter(
-                new File(reportDirectory, "complexes_with_extra_assemblies" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_REMOVE);
+                new File(reportDirectory, "complexes_with_extra_xrefs" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_REMOVE);
         this.changesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "multiple_changes_needed" + extension), sep, header, ProcessReportWriter.CHANGES_HEADER_LINE);
         this.errorReportWriter = new ErrorsReportWriter(

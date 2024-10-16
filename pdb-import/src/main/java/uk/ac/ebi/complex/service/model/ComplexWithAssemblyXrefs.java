@@ -12,7 +12,6 @@ import java.util.List;
 @NoArgsConstructor
 public class ComplexWithAssemblyXrefs {
     private String complexId;
-    List<InteractorXref> xrefsToKeep;
     List<String> xrefsToAdd;
     List<InteractorXref> xrefsToUpdate;
     List<InteractorXref> xrefsToRemove;

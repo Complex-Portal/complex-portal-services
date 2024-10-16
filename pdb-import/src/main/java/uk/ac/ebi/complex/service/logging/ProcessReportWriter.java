@@ -7,13 +7,13 @@ import java.util.Collection;
 public class ProcessReportWriter extends ReportWriter {
 
     public static final String[] NO_CHANGES_HEADER_LINE = new String[]{
-            "complex_id", "assemblies" };
+            "complex_id", "assemblies_from_pdb" };
     public static final String[] COMPLEXES_WITH_ASSEMBLIES_TO_ADD = new String[]{
-            "complex_id", "assemblies", "assemblies_to_add" };
+            "complex_id", "assemblies_from_pdb", "xrefs_to_add" };
     public static final String[] COMPLEXES_WITH_ASSEMBLIES_TO_REMOVE = new String[]{
-            "complex_id", "assemblies", "assemblies_to_remove" };
+            "complex_id", "assemblies_from_pdb", "xrefs_to_remove" };
     public static final String[] CHANGES_HEADER_LINE = new String[]{
-            "complex_id", "assemblies", "assemblies_to_keep", "assemblies_to_add", "assemblies_to_remove", "assemblies_to_update" };
+            "complex_id", "assemblies_from_pdb", "xrefs_to_add", "xrefs_to_remove", "xrefs_to_update" };
 
     public ProcessReportWriter(File outputFile, String separator, boolean header, String[] headerline) throws IOException {
         super(outputFile, separator, header, headerline);
@@ -36,14 +36,13 @@ public class ProcessReportWriter extends ReportWriter {
         writeLine(new String[]{
                 complexId,
                 String.join(" ", assemblies),
-                String.join(" ", assemblies)
+                String.join(" ", assembliesToUpdate)
         });
         flush();
     }
 
     public void write(String complexId,
                       Collection<String> assemblies,
-                      Collection<String> assembliesToKeep,
                       Collection<String> assembliesToAdd,
                       Collection<String> assembliesToRemove,
                       Collection<String> assembliesToUpdate) throws IOException {
@@ -51,7 +50,6 @@ public class ProcessReportWriter extends ReportWriter {
         writeLine(new String[]{
                 complexId,
                 String.join(" ", assemblies),
-                String.join(" ", assembliesToKeep),
                 String.join(" ", assembliesToAdd),
                 String.join(" ", assembliesToRemove),
                 String.join(" ", assembliesToUpdate)
