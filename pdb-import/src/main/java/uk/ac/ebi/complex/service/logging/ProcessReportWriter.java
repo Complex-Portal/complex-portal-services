@@ -8,6 +8,10 @@ public class ProcessReportWriter extends ReportWriter {
 
     public static final String[] NO_CHANGES_HEADER_LINE = new String[]{
             "complex_id", "assemblies" };
+    public static final String[] COMPLEXES_WITH_ASSEMBLIES_TO_ADD = new String[]{
+            "complex_id", "assemblies", "assemblies_to_add" };
+    public static final String[] COMPLEXES_WITH_ASSEMBLIES_TO_REMOVE = new String[]{
+            "complex_id", "assemblies", "assemblies_to_remove" };
     public static final String[] CHANGES_HEADER_LINE = new String[]{
             "complex_id", "assemblies", "assemblies_to_keep", "assemblies_to_add", "assemblies_to_remove", "assemblies_to_update" };
 
@@ -20,6 +24,18 @@ public class ProcessReportWriter extends ReportWriter {
 
         writeLine(new String[]{
                 complexId,
+                String.join(" ", assemblies)
+        });
+        flush();
+    }
+
+    public void write(String complexId,
+                      Collection<String> assemblies,
+                      Collection<String> assembliesToUpdate) throws IOException {
+
+        writeLine(new String[]{
+                complexId,
+                String.join(" ", assemblies),
                 String.join(" ", assemblies)
         });
         flush();

@@ -38,6 +38,8 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
     private final FileConfiguration fileConfiguration;
 
     private ProcessReportWriter noChangesReportWriter;
+    private ProcessReportWriter complexesMissingAssembliesReportWriter;
+    private ProcessReportWriter complexesWithExtraAssembliesReportWriter;
     private ProcessReportWriter changesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
@@ -73,6 +75,16 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
 
             if (xrefsToAdd.isEmpty() && xrefsToRemove.isEmpty() && xrefsToUpdate.isEmpty()) {
                 noChangesReportWriter.write(item.getComplexId(), item.getAssemblies());
+            } else if (!xrefsToAdd.isEmpty() && xrefsToRemove.isEmpty() && xrefsToUpdate.isEmpty()) {
+                complexesMissingAssembliesReportWriter.write(
+                        item.getComplexId(),
+                        item.getAssemblies(),
+                        xrefsToAdd);
+            } else if (!xrefsToRemove.isEmpty() && xrefsToAdd.isEmpty() && xrefsToUpdate.isEmpty()) {
+                complexesWithExtraAssembliesReportWriter.write(
+                        item.getComplexId(),
+                        item.getAssemblies(),
+                        xrefsToRemove.stream().map(InteractorXref::getId).collect(Collectors.toList()));
             } else {
                 changesReportWriter.write(
                         item.getComplexId(),
@@ -80,7 +92,9 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                         xrefsToKeep.stream().map(InteractorXref::getId).collect(Collectors.toList()),
                         xrefsToAdd,
                         xrefsToRemove.stream().map(InteractorXref::getId).collect(Collectors.toList()),
-                        xrefsToUpdate.stream().map(InteractorXref::getId).collect(Collectors.toList()));
+                        xrefsToUpdate.stream()
+                                .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
+                                .collect(Collectors.toList()));
             }
 
             return new ComplexWithAssemblyXrefs(
@@ -161,8 +175,12 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
 
         this.noChangesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "no_changes_needed" + extension), sep, header, ProcessReportWriter.NO_CHANGES_HEADER_LINE);
+        this.complexesMissingAssembliesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "complexes_missing_assemblies" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_ADD);
+        this.complexesWithExtraAssembliesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "complexes_with_extra_assemblies" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_REMOVE);
         this.changesReportWriter = new ProcessReportWriter(
-                new File(reportDirectory, "changes_needed" + extension), sep, header, ProcessReportWriter.CHANGES_HEADER_LINE);
+                new File(reportDirectory, "multiple_changes_needed" + extension), sep, header, ProcessReportWriter.CHANGES_HEADER_LINE);
         this.errorReportWriter = new ErrorsReportWriter(
                 new File(reportDirectory, "process_errors" + extension), sep, header);
     }
