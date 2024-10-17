@@ -49,8 +49,9 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
     public ComplexWithAssemblyXrefs process(ComplexWithAssemblies item) throws Exception {
         try {
             IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
-            Collection<Xref> pdbIdentifiers = XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME);
-            Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(complex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME);
+            List<Xref> pdbXrefs = new ArrayList<>();
+            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME));
+            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(complex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME));
 
             List<String> xrefsToAdd = new ArrayList<>();
             List<InteractorXref> xrefsToRemove = new ArrayList<>();
@@ -59,23 +60,15 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
 
             if (item.getAssemblies().isEmpty()) {
                 // No PDB assemblies for this complex, we delete all PDB xrefs with identity qualifier
-                pdbIdentifiers.stream()
-                        .filter(xref -> xref.getQualifier() != null && Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier()))
-                        .forEach(xref -> xrefsToRemove.add((InteractorXref) xref));
                 pdbXrefs.stream()
                         .filter(xref -> xref.getQualifier() != null && Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier()))
                         .forEach(xref -> xrefsToRemove.add((InteractorXref) xref));
-                pdbIdentifiers.stream()
-                        .filter(xref -> xref.getQualifier() != null && EXP_EVIDENCE.equals(xref.getQualifier().getShortName()))
-                        .forEach(xref -> xrefsToReview.add((InteractorXref) xref));
                 pdbXrefs.stream()
                         .filter(xref -> xref.getQualifier() != null && EXP_EVIDENCE.equals(xref.getQualifier().getShortName()))
                         .forEach(xref -> xrefsToReview.add((InteractorXref) xref));
             } else {
                 Set<String> matchesFound = new HashSet<>();
 
-                pdbIdentifiers.forEach(xref -> checkIfXrefNeedsUpdateOrRemove(
-                        xref, item.getAssemblies(), matchesFound, xrefsToRemove, xrefsToUpdate, xrefsToReview));
                 pdbXrefs.forEach(xref -> checkIfXrefNeedsUpdateOrRemove(
                         xref, item.getAssemblies(), matchesFound, xrefsToRemove, xrefsToUpdate, xrefsToReview));
 
@@ -107,12 +100,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                 complexesWithXrefsToReviewReportWriter.write(
                         item.getComplexId(),
                         item.getAssemblies(),
-                        xrefsToAdd,
-                        xrefsToRemove.stream().map(InteractorXref::getId).collect(Collectors.toList()),
-                        xrefsToUpdate.stream()
-                                .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
-                                .collect(Collectors.toList()),
-                        xrefsToReview.stream()
+                        pdbXrefs.stream()
                                 .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
                                 .collect(Collectors.toList()));
             }
