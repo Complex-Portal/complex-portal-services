@@ -167,9 +167,11 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             List<InteractorXref> xrefsToUpdate,
             List<InteractorXref> xrefsToReview) {
 
+        String xrefId = xref.getId().toLowerCase();
+
         for (String assembly: assemblies) {
             if (!matchesFound.contains(assembly)) {
-                if (xref.getId().equals(assembly)) {
+                if (xrefId.equals(assembly)) {
                     if (xref.getQualifier() == null) {
                         if (!Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
                             if (EXP_EVIDENCE.equals(xref.getQualifier().getShortName())) {

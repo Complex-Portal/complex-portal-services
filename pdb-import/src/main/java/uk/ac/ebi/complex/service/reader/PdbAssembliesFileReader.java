@@ -42,7 +42,7 @@ public class PdbAssembliesFileReader {
             if (StringUtils.isNotEmpty(complexId)) {
             String assembly = csvLine[7].split("_")[0];
                 complexAssemblies.putIfAbsent(complexId, new HashSet<>());
-                complexAssemblies.get(complexId).add(assembly);
+                complexAssemblies.get(complexId).add(assembly.toLowerCase());
             }
         });
         csvReader.close();
