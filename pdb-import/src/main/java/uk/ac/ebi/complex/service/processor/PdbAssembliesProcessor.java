@@ -90,12 +90,16 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                 complexesWithExtraAssembliesReportWriter.write(
                         item.getComplexId(),
                         item.getAssemblies(),
-                        xrefsToRemove.stream().map(InteractorXref::getId).collect(Collectors.toList()));
+                        xrefsToRemove.stream()
+                                .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
+                                .collect(Collectors.toList()));
             } else if (!xrefsToUpdate.isEmpty() && xrefsToAdd.isEmpty() && xrefsToRemove.isEmpty() && xrefsToReview.isEmpty()) {
                 complexesWithXrefsToUpdateReportWriter.write(
                         item.getComplexId(),
                         item.getAssemblies(),
-                        xrefsToUpdate.stream().map(InteractorXref::getId).collect(Collectors.toList()));
+                        xrefsToUpdate.stream()
+                                .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
+                                .collect(Collectors.toList()));
             }  else {
                 complexesWithXrefsToReviewReportWriter.write(
                         item.getComplexId(),
