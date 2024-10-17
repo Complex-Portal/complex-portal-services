@@ -40,6 +40,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
     private ProcessReportWriter noChangesReportWriter;
     private ProcessReportWriter complexesMissingAssembliesReportWriter;
     private ProcessReportWriter complexesWithExtraAssembliesReportWriter;
+    private ProcessReportWriter complexesWithXrefsToUpdateReportWriter;
     private ProcessReportWriter changesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
@@ -55,8 +56,13 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             List<InteractorXref> xrefsToUpdate = new ArrayList<>();
 
             if (item.getAssemblies().isEmpty()) {
-                pdbIdentifiers.forEach(xref -> xrefsToRemove.add((InteractorXref) xref));
-                pdbXrefs.forEach(xref -> xrefsToRemove.add((InteractorXref) xref));
+                // No PDB assemblies for this complex, we delete all PDB xrefs with identity qualifier
+                pdbIdentifiers.stream()
+                        .filter(xref -> xref.getQualifier() != null && Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier()))
+                        .forEach(xref -> xrefsToRemove.add((InteractorXref) xref));
+                pdbXrefs.stream()
+                        .filter(xref -> xref.getQualifier() != null && Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier()))
+                        .forEach(xref -> xrefsToRemove.add((InteractorXref) xref));
             } else {
                 Set<String> matchesFound = new HashSet<>();
 
@@ -84,6 +90,11 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                         item.getComplexId(),
                         item.getAssemblies(),
                         xrefsToRemove.stream().map(InteractorXref::getId).collect(Collectors.toList()));
+            } else if (!xrefsToUpdate.isEmpty() && xrefsToAdd.isEmpty() && xrefsToRemove.isEmpty()) {
+                complexesWithXrefsToUpdateReportWriter.write(
+                        item.getComplexId(),
+                        item.getAssemblies(),
+                        xrefsToUpdate.stream().map(InteractorXref::getId).collect(Collectors.toList()));
             } else {
                 changesReportWriter.write(
                         item.getComplexId(),
@@ -141,6 +152,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
         for (String assembly: assemblies) {
             if (!matchesFound.contains(assembly)) {
                 if (xref.getId().equals(assembly)) {
+                    // Xref matches the PDB assembly, but it does not have qualifier set as identity
                     if (xref.getQualifier() == null || !Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
                         xrefsToUpdate.add((InteractorXref) xref);
                     }
@@ -150,7 +162,10 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             }
         }
 
-        xrefsToRemove.add((InteractorXref) xref);
+        if (xref.getQualifier() != null && Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
+            // Xref does not match any PDB assembly, we delete it as it has identity qualifier
+            xrefsToRemove.add((InteractorXref) xref);
+        }
     }
 
     @Override
@@ -173,6 +188,8 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                 new File(reportDirectory, "complexes_missing_xrefs" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_ADD);
         this.complexesWithExtraAssembliesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "complexes_with_extra_xrefs" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_REMOVE);
+        this.complexesWithXrefsToUpdateReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "complexes_with_xrefs_to_update" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_UPDATE);
         this.changesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "multiple_changes_needed" + extension), sep, header, ProcessReportWriter.CHANGES_HEADER_LINE);
         this.errorReportWriter = new ErrorsReportWriter(

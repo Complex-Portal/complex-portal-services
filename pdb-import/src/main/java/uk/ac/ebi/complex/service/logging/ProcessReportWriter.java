@@ -12,6 +12,8 @@ public class ProcessReportWriter extends ReportWriter {
             "complex_id", "assemblies_from_pdb", "xrefs_to_add" };
     public static final String[] COMPLEXES_WITH_ASSEMBLIES_TO_REMOVE = new String[]{
             "complex_id", "assemblies_from_pdb", "xrefs_to_remove" };
+    public static final String[] COMPLEXES_WITH_ASSEMBLIES_TO_UPDATE = new String[]{
+            "complex_id", "assemblies_from_pdb", "xrefs_to_update" };
     public static final String[] CHANGES_HEADER_LINE = new String[]{
             "complex_id", "assemblies_from_pdb", "xrefs_to_add", "xrefs_to_remove", "xrefs_to_update" };
 
