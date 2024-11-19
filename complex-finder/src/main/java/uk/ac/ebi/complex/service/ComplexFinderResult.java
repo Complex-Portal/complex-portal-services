@@ -33,6 +33,7 @@ public class ComplexFinderResult<T> {
     @EqualsAndHashCode
     public static class ExactMatch<T> {
         private String complexAc;
+        private boolean predictedComplex;
         private MatchType matchType;
         private T complex;
     }
@@ -44,6 +45,7 @@ public class ComplexFinderResult<T> {
     @EqualsAndHashCode
     public static class PartialMatch<T> {
         private String complexAc;
+        private boolean predictedComplex;
         private MatchType matchType;
         private Collection<String> matchingProteins;
         private Collection<String> extraProteinsInComplex;
