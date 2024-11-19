@@ -62,6 +62,39 @@ public class UniProtMappingService {
         return filteredMappings;
     }
 
+    public Map<String, List<UniprotProtein>> mapGenes(Collection<String> geneNames) {
+        Map<String, List<UniprotProtein>> allMappings = mapToUniprotProteins(geneNames, this::mapGeneNamescHttpEntity);
+
+        // UniProt mapping API returns too many results when mapping genes
+        // To reduce the results, we filter our reviewed entries and/or proteins with the primary
+        // gene name matching
+        Map<String, List<UniprotProtein>> filteredMappings = new HashMap<>();
+        for (String geneName: allMappings.keySet()) {
+            List<UniprotProtein> proteins  = allMappings.get(geneName);
+            List<UniprotProtein> reviewedProteins = filterReviewedProteins(proteins);
+            if (!reviewedProteins.isEmpty()) {
+                if (reviewedProteins.size() == 1) {
+                    filteredMappings.put(geneName, reviewedProteins);
+                } else {
+                    List<UniprotProtein> reviewedProteinsWithGeneName = filterProteinsWithGeneName(geneName, reviewedProteins);
+                    if (!reviewedProteinsWithGeneName.isEmpty()) {
+                        filteredMappings.put(geneName, reviewedProteinsWithGeneName);
+                    } else {
+                        filteredMappings.put(geneName, reviewedProteins);
+                    }
+                }
+            } else {
+                List<UniprotProtein> proteinsWithGeneName = filterProteinsWithGeneName(geneName, proteins);
+                if (!proteinsWithGeneName.isEmpty()) {
+                    filteredMappings.put(geneName, proteinsWithGeneName);
+                } else {
+                    filteredMappings.put(geneName, proteins);
+                }
+            }
+        }
+        return filteredMappings;
+    }
+
     public Map<String, List<UniprotProtein>> mapToUniprotProteins(
             Collection<String> ids,
             Function<Collection<String>, HttpEntity> entityFunction) {
@@ -124,6 +157,16 @@ public class UniProtMappingService {
                 .build();
     }
 
+    private HttpEntity mapGeneNamescHttpEntity(Collection<String> ids) {
+        return MultipartEntityBuilder.create()
+                .addPart("from", new StringBody("Gene_Name", ContentType.TEXT_PLAIN))
+                .addPart("to", new StringBody("UniProtKB", ContentType.TEXT_PLAIN))
+                .addPart("ids", new StringBody(String.join(",", ids), ContentType.TEXT_PLAIN))
+                .addPart("taxId", new StringBody("9606", ContentType.TEXT_PLAIN))
+                .setCharset(Charsets.UTF_8)
+                .build();
+    }
+
     private UniProt.IdMapping.Poll.Result.Status pollStatus(String jobId) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
@@ -139,7 +182,7 @@ public class UniProtMappingService {
 
         Map<String, String> params = Map.of(
                 "format", "tsv",
-                "fields", String.join(",", List.of("accession", "reviewed", "id", "protein_name"))
+                "fields", String.join(",", List.of("accession", "reviewed", "id", "protein_name", "gene_primary", "organism_id"))
         );
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -158,10 +201,12 @@ public class UniProtMappingService {
                 String reviewed = line[2];
                 String name = line[3];
                 String proteinName = line[4];
+                String geneName = line[5];
+                String organism = line[6];
 
                 List<UniprotProtein> mappings = result.computeIfAbsent(from, k -> new ArrayList<>());
                 if (!proteinName.equals("deleted")) {
-                    mappings.add(new UniprotProtein(entry, name, "reviewed".equals(reviewed)));
+                    mappings.add(new UniprotProtein(entry, name, geneName, Integer.valueOf(organism), "reviewed".equals(reviewed)));
                 }
             });
 
@@ -176,6 +221,22 @@ public class UniProtMappingService {
         return proteins.stream()
                 .filter(UniprotProtein::isReviewed)
                 .collect(Collectors.toList());
+    }
+
+    private List<UniprotProtein> filterProteinsWithGeneName(String geneName, List<UniprotProtein> proteins) {
+        List<UniprotProtein> proteinsWithGeneName = proteins.stream()
+                .filter(protein -> geneName.equals(protein.getGeneName()))
+                .collect(Collectors.toList());
+        if (proteinsWithGeneName.size() > 1) {
+            List<UniprotProtein> proteinsWithNameMatchingGeneName = proteinsWithGeneName.stream()
+                    .filter(protein -> protein.getProteinName() != null)
+                    .filter(protein -> protein.getProteinName().startsWith(geneName))
+                    .collect(Collectors.toList());
+            if (!proteinsWithNameMatchingGeneName.isEmpty()) {
+                return proteinsWithNameMatchingGeneName;
+            }
+        }
+        return proteinsWithGeneName;
     }
 
     private static String urlEncode(Map<String, String> data) {
