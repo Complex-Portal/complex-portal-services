@@ -29,6 +29,7 @@
         <module>complex-finder</module>
         <module>complex-batch-import</module>
         <module>uniplex-import</module>
+        <module>music-import</module>
     </modules>
 
     <scm>
