@@ -8,9 +8,11 @@ import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.logging.DeleteReportWriter;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.model.ComplexWithXrefsToDelete;
+import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Log4j
@@ -49,22 +51,52 @@ public class ComplexXrefDeleteWriter extends AbstractBatchWriter<ComplexWithXref
 
     @Override
     public void write(List<? extends ComplexWithXrefsToDelete> items) throws Exception {
+        List<IntactComplex> complexesUpdated = new ArrayList<>();
+
         for (ComplexWithXrefsToDelete item: items) {
-            String complexAc = item.getComplex().getComplexAc();
+            List<Xref> identifiersToDelete = new ArrayList<>();
+            List<Xref> xrefsToDelete = new ArrayList<>();
+
+            IntactComplex complex = item.getComplex();
+            String complexAc = complex.getComplexAc();
             for (Xref xref: item.getIdentityXrefs()) {
-                xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
+//                if (appProperties.isDryRunMode()) {
+                    xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
+//                } else {
+//                    identifiersToDelete.add(xref);
+//                }
             }
             for (Xref xref: item.getSubsetXrefs()) {
-                xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
+//                if (appProperties.isDryRunMode()) {
+                    xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
+//                } else {
+//                    xrefsToDelete.add(xref);
+//                }
             }
             for (Xref xref: item.getComplexClusterXrefs()) {
-                xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
+//                if (appProperties.isDryRunMode()) {
+                    xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
+//                } else {
+//                    xrefsToDelete.add(xref);
+//                }
             }
+
+//            if (!appProperties.isDryRunMode()) {
+//                if (!identifiersToDelete.isEmpty() || !xrefsToDelete.isEmpty()) {
+//                    if (!identifiersToDelete.isEmpty()) {
+//                        complex.getIdentifiers().removeAll(identifiersToDelete);
+//                    }
+//                    if (!xrefsToDelete.isEmpty()) {
+//                        complex.getXrefs().removeAll(xrefsToDelete);
+//                    }
+//                    complexesUpdated.add(complex);
+//                }
+//            }
         }
 
-        // TODO: actual call to DB to delete xrefs
-        if (!appProperties.isDryRunMode()) {
-        }
+//        if (!appProperties.isDryRunMode()) {
+//            complexService.saveOrUpdate(complexesUpdated);
+//        }
     }
 
     @Override
