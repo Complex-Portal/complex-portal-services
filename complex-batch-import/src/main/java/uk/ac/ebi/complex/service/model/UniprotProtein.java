@@ -12,5 +12,7 @@ import lombok.NoArgsConstructor;
 public class UniprotProtein {
     private String proteinAc;
     private String proteinName;
+    private String geneName;
+    private Integer organism;
     private boolean reviewed;
 }
