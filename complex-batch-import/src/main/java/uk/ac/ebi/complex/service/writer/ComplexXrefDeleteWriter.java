@@ -60,43 +60,43 @@ public class ComplexXrefDeleteWriter extends AbstractBatchWriter<ComplexWithXref
             IntactComplex complex = item.getComplex();
             String complexAc = complex.getComplexAc();
             for (Xref xref: item.getIdentityXrefs()) {
-                if (appProperties.isDryRunMode()) {
+//                if (appProperties.isDryRunMode()) {
                     xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
-                } else {
-                    identifiersToDelete.add(xref);
-                }
+//                } else {
+//                    identifiersToDelete.add(xref);
+//                }
             }
             for (Xref xref: item.getSubsetXrefs()) {
-                if (appProperties.isDryRunMode()) {
+//                if (appProperties.isDryRunMode()) {
                     xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
-                } else {
-                    xrefsToDelete.add(xref);
-                }
+//                } else {
+//                    xrefsToDelete.add(xref);
+//                }
             }
             for (Xref xref: item.getComplexClusterXrefs()) {
-                if (appProperties.isDryRunMode()) {
+//                if (appProperties.isDryRunMode()) {
                     xrefsToDeleteReportWriter.write(complexAc, xref.getId(), xref.getQualifier().getShortName());
-                } else {
-                    xrefsToDelete.add(xref);
-                }
+//                } else {
+//                    xrefsToDelete.add(xref);
+//                }
             }
 
-            if (!appProperties.isDryRunMode()) {
-                if (!identifiersToDelete.isEmpty() || !xrefsToDelete.isEmpty()) {
-                    if (!identifiersToDelete.isEmpty()) {
-                        complex.getIdentifiers().removeAll(identifiersToDelete);
-                    }
-                    if (!xrefsToDelete.isEmpty()) {
-                        complex.getXrefs().removeAll(xrefsToDelete);
-                    }
-                    complexesUpdated.add(complex);
-                }
-            }
+//            if (!appProperties.isDryRunMode()) {
+//                if (!identifiersToDelete.isEmpty() || !xrefsToDelete.isEmpty()) {
+//                    if (!identifiersToDelete.isEmpty()) {
+//                        complex.getIdentifiers().removeAll(identifiersToDelete);
+//                    }
+//                    if (!xrefsToDelete.isEmpty()) {
+//                        complex.getXrefs().removeAll(xrefsToDelete);
+//                    }
+//                    complexesUpdated.add(complex);
+//                }
+//            }
         }
 
-        if (!appProperties.isDryRunMode()) {
-            complexService.saveOrUpdate(complexesUpdated);
-        }
+//        if (!appProperties.isDryRunMode()) {
+//            complexService.saveOrUpdate(complexesUpdated);
+//        }
     }
 
     @Override
