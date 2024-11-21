@@ -24,7 +24,8 @@ import uk.ac.ebi.complex.service.model.MusicComplexToImport;
 import uk.ac.ebi.complex.service.processor.ComplexImportBatchProcessor;
 import uk.ac.ebi.complex.service.processor.MusicFileProcessorTasklet;
 import uk.ac.ebi.complex.service.reader.ComplexImportBatchReader;
-import uk.ac.ebi.complex.service.reader.MusicComplexReader;
+import uk.ac.ebi.complex.service.reader.MusicComplexWithConfidenceReader;
+import uk.ac.ebi.complex.service.reader.MusicComplexWithNameReader;
 import uk.ac.ebi.complex.service.writer.ComplexImportBatchWriter;
 import uk.ac.ebi.complex.service.writer.MusicComplexWriter;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
@@ -77,16 +78,29 @@ public class MusicImportConfig {
     }
 
     @Bean
-    public MusicComplexReader musicComplexReader(FileConfiguration fileConfiguration) {
-        return MusicComplexReader.builder().fileConfiguration(fileConfiguration).build();
+    public MusicComplexWithConfidenceReader musicComplexWithConfidenceReader(FileConfiguration fileConfiguration) {
+        return MusicComplexWithConfidenceReader.builder().fileConfiguration(fileConfiguration).build();
     }
 
     @Bean
-    public ComplexImportBatchReader<Double, MusicComplexToImport> musicBatchReader(
-            FileConfiguration fileConfiguration,
-            MusicComplexReader musicComplexReader) {
+    public MusicComplexWithNameReader musicComplexWithNameReader(FileConfiguration fileConfiguration) {
+        return MusicComplexWithNameReader.builder().fileConfiguration(fileConfiguration).build();
+    }
 
-        return new ComplexImportBatchReader<>(fileConfiguration, musicComplexReader);
+    @Bean
+    public ComplexImportBatchReader<Double, MusicComplexToImport> musicWithConfidenceBatchReader(
+            FileConfiguration fileConfiguration,
+            MusicComplexWithConfidenceReader musicComplexWithConfidenceReader) {
+
+        return new ComplexImportBatchReader<>(fileConfiguration, musicComplexWithConfidenceReader);
+    }
+
+    @Bean
+    public ComplexImportBatchReader<Double, MusicComplexToImport> musicWithNameBatchReader(
+            FileConfiguration fileConfiguration,
+            MusicComplexWithNameReader musicComplexWithNameReader) {
+
+        return new ComplexImportBatchReader<>(fileConfiguration, musicComplexWithNameReader);
     }
 
     @Bean
@@ -110,31 +124,39 @@ public class MusicImportConfig {
     }
 
     @Bean
-    public Step musicComplexesImportStep(
+    public Step musicComplexesWithConfidenceImportStep(
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
-            ComplexImportBatchReader<Double, MusicComplexToImport> musicBatchReader,
+            ComplexImportBatchReader<Double, MusicComplexToImport> musicWithConfidenceBatchReader,
             ComplexImportBatchProcessor<Double, MusicComplexToImport> musicBatchProcessor,
             ComplexImportBatchWriter<Double, MusicComplexToImport> musicBatchWriter) throws Exception {
 
         StepBuilder basicStep = basicStepBuilder(
-                "musicComplexesImportStep",
+                "musicComplexesWithConfidenceImportStep",
                 jamiTransactionManager,
                 basicBatchJobRepository);
 
-        return new SimpleStepBuilder<MusicComplexToImport, ComplexWithMatches<Double, MusicComplexToImport>>(basicStep)
-                .chunk(50)
-                .reader(musicBatchReader)
-                .processor(musicBatchProcessor)
-                .writer(musicBatchWriter)
-                .faultTolerant()
-                .retryLimit(10)
-                .retry(org.springframework.batch.item.ItemStreamException.class)
-                .retry(javax.net.ssl.SSLHandshakeException.class)
-                .listener((StepExecutionListener) basicChunkLoggerListener)
-                .listener((ChunkListener) basicChunkLoggerListener)
-                .build();
+        return musicComplexesImportStep(
+                basicStep, basicChunkLoggerListener, musicWithConfidenceBatchReader, musicBatchProcessor, musicBatchWriter);
+    }
+
+    @Bean
+    public Step musicComplexesWithNameImportStep(
+            PlatformTransactionManager jamiTransactionManager,
+            JobRepositoryFactoryBean basicBatchJobRepository,
+            BasicChunkLoggerListener basicChunkLoggerListener,
+            ComplexImportBatchReader<Double, MusicComplexToImport> musicWithNameBatchReader,
+            ComplexImportBatchProcessor<Double, MusicComplexToImport> musicBatchProcessor,
+            ComplexImportBatchWriter<Double, MusicComplexToImport> musicBatchWriter) throws Exception {
+
+        StepBuilder basicStep = basicStepBuilder(
+                "musicComplexesWithNameImportStep",
+                jamiTransactionManager,
+                basicBatchJobRepository);
+
+        return musicComplexesImportStep(
+                basicStep, basicChunkLoggerListener, musicWithNameBatchReader, musicBatchProcessor, musicBatchWriter);
     }
 
     @Bean
@@ -149,13 +171,28 @@ public class MusicImportConfig {
     }
 
     @Bean
-    public Job musicComplexesImport(
+    public Job musicComplexesWithConfidenceImport(
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
             @Qualifier("processMusicFile") Step processMusicFile,
-            @Qualifier("musicComplexesImportStep") Step importStep) throws Exception {
+            @Qualifier("musicComplexesWithConfidenceImportStep") Step importStep) throws Exception {
 
-        return new JobBuilder("musicComplexesImport")
+        return new JobBuilder("musicComplexesWithConfidenceImport")
+                .repository(basicBatchJobRepository.getObject())
+                .listener(basicJobLoggerListener)
+                .start(processMusicFile)
+                .next(importStep)
+                .build();
+    }
+
+    @Bean
+    public Job musicComplexesWithNameImport(
+            JobRepositoryFactoryBean basicBatchJobRepository,
+            SimpleJobListener basicJobLoggerListener,
+            @Qualifier("processMusicFile") Step processMusicFile,
+            @Qualifier("musicComplexesWithNameImportStep") Step importStep) throws Exception {
+
+        return new JobBuilder("musicComplexesWithNameImport")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
                 .start(processMusicFile)
@@ -172,5 +209,27 @@ public class MusicImportConfig {
                 .transactionManager(transactionManager)
                 .repository(jobRepository.getObject())
                 .startLimit(5);
+    }
+
+    private Step musicComplexesImportStep(
+            StepBuilder basicStep,
+            BasicChunkLoggerListener basicChunkLoggerListener,
+            ComplexImportBatchReader<Double, MusicComplexToImport> musicBatchReader,
+            ComplexImportBatchProcessor<Double, MusicComplexToImport> musicBatchProcessor,
+            ComplexImportBatchWriter<Double, MusicComplexToImport> musicBatchWriter) {
+
+
+        return new SimpleStepBuilder<MusicComplexToImport, ComplexWithMatches<Double, MusicComplexToImport>>(basicStep)
+                .chunk(50)
+                .reader(musicBatchReader)
+                .processor(musicBatchProcessor)
+                .writer(musicBatchWriter)
+                .faultTolerant()
+                .retryLimit(10)
+                .retry(org.springframework.batch.item.ItemStreamException.class)
+                .retry(javax.net.ssl.SSLHandshakeException.class)
+                .listener((StepExecutionListener) basicChunkLoggerListener)
+                .listener((ChunkListener) basicChunkLoggerListener)
+                .build();
     }
 }

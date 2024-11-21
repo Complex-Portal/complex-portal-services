@@ -3,22 +3,24 @@ package uk.ac.ebi.complex.service.reader;
 import lombok.experimental.SuperBuilder;
 import uk.ac.ebi.complex.service.model.MusicComplexToImport;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @SuperBuilder
-public class MusicComplexReader extends ComplexFileReader<Double, MusicComplexToImport> {
+public class MusicComplexWithNameReader extends ComplexFileReader<Double, MusicComplexToImport> {
 
     @Override
     protected MusicComplexToImport complexFromStringArray(String[] csvLine) {
-            String complexId = csvLine[0];
-            String[] uniprotAcs = csvLine[1].split(" ");
-            String robustness = csvLine[2];
+        String complexName = csvLine[0];
+        String complexId = csvLine[2];
+        String[] uniprotAcs = csvLine[1].split(",");
 
         return MusicComplexToImport.builder()
+                .name(complexName)
                 .complexIds(Collections.singletonList(complexId))
-                .confidence(Double.parseDouble(robustness))
                 .proteinIds(Arrays.stream(uniprotAcs)
+                        .map(String::trim)
                         .sorted()
                         .distinct()
                         .collect(Collectors.toList()))

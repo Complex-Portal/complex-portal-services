@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.model.MusicComplexToImport;
 import uk.ac.ebi.complex.service.model.UniprotProtein;
-import uk.ac.ebi.complex.service.reader.MusicComplexReader;
+import uk.ac.ebi.complex.service.reader.MusicComplexWithConfidenceReader;
 import uk.ac.ebi.complex.service.service.UniProtMappingService;
 import uk.ac.ebi.complex.service.writer.MusicComplexWriter;
 
@@ -24,7 +24,7 @@ public class MusicFileProcessor extends ComplexFileProcessor<Double, MusicComple
     private final UniProtMappingService uniProtMappingService;
 
     public MusicFileProcessor(FileConfiguration fileConfiguration,
-                              MusicComplexReader musicComplexReader,
+                              MusicComplexWithConfidenceReader musicComplexReader,
                               MusicComplexWriter musicComplexWriter,
                               UniProtMappingService uniProtMappingService) throws IOException {
 
@@ -48,12 +48,14 @@ public class MusicFileProcessor extends ComplexFileProcessor<Double, MusicComple
                 " and " +
                 String.join(",", complexB.getComplexIds()));
 
+        String name = complexA.getName() != null ? complexA.getName() : complexB.getName();
         List<String> ids = Stream.concat(complexA.getComplexIds().stream(), complexB.getComplexIds().stream())
                 .distinct()
                 .collect(Collectors.toList());
         Double confidence = Double.max(complexA.getConfidence(), complexB.getConfidence());
 
         return MusicComplexToImport.builder()
+                .name(name)
                 .complexIds(ids)
                 .confidence(confidence)
                 .proteinIds(complexA.getProteinIds())
@@ -76,7 +78,7 @@ public class MusicFileProcessor extends ComplexFileProcessor<Double, MusicComple
 
         MusicFileProcessor musicFileProcessor = new MusicFileProcessor(
                 c,
-                MusicComplexReader.builder().fileConfiguration(c).build(),
+                MusicComplexWithConfidenceReader.builder().fileConfiguration(c).build(),
                 MusicComplexWriter.builder().fileConfiguration(c).build(),
                 new UniProtMappingService());
         musicFileProcessor.processFile();

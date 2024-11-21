@@ -103,8 +103,7 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         addIdentityXrefs(newComplex, complex);
         addConfidenceAnnotation(newComplex, complex);
         setComplexComponents(newComplex, complex);
-        // Systematic name is set after the components to have access to the gene names of the proteins
-        setComplexSystematicName(complex);
+        addNames(newComplex, complex);
         setComplexStatus(complex);
         setExperimentAndPublication(complex);
         complex.setPredictedComplex(true);
@@ -179,6 +178,8 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
 
     protected abstract void setComplexSource(IntactComplex complex) throws SourceNotFoundException;
 
+    protected abstract void addNames(R newComplex, IntactComplex existingComplex);
+
     private void setExperimentAndPublication(IntactComplex complex) {
         IntactUtils.createAndAddDefaultExperimentForComplexes(complex, READY_FOR_RELEASE_COMPLEX_PUBMED_ID);
     }
@@ -244,7 +245,8 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         complex.getIdentifiers().add(xref);
     }
 
-    private void setComplexSystematicName(IntactComplex complex) {
+    protected void setComplexSystematicName(IntactComplex complex) {
+        // Systematic name is set after the components to have access to the gene names of the proteins
         String geneNamesConcatenated = complex.getParticipants()
                 .stream()
                 .map(Entity::getInteractor)

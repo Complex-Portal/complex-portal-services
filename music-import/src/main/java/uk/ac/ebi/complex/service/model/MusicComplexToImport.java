@@ -10,4 +10,5 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 public class MusicComplexToImport extends ComplexToImport<Double> {
+    private String name;
 }
