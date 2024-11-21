@@ -151,7 +151,7 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
 
             for (ComplexWithMatches<T, R> complexWithMatches : items) {
                 R complexToImport = complexWithMatches.getComplexToImport();
-                loNewComplexes(complexToImport, newComplexes);
+                logNewComplexes(complexToImport, newComplexes);
                 logUpdatedComplexes(complexToImport, updatedIdentityComplexes, Xref.IDENTITY);
                 logUpdatedComplexes(complexToImport, updatedSubsetComplexes, ComplexManager.SUBSET_QUALIFIER);
                 logUpdatedComplexes(complexToImport, updatedComplexClusterComplexes, ComplexManager.COMPLEX_CLUSTER_QUALIFIER);
@@ -210,21 +210,25 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                 qualifier);
     }
 
-    private void loNewComplexes(R complex, Collection<IntactComplex> newComplexes) throws IOException {
-        newComplexesReportWriter.write(
-                complex.getComplexIds(),
-                complex.getConfidence(),
-                complex.getProteinIds(),
-                newComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
-                Xref.IDENTITY);
+    private void logNewComplexes(R complex, Collection<IntactComplex> newComplexes) throws IOException {
+        if (!newComplexes.isEmpty()) {
+            newComplexesReportWriter.write(
+                    complex.getComplexIds(),
+                    complex.getConfidence(),
+                    complex.getProteinIds(),
+                    newComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
+                    Xref.IDENTITY);
+        }
     }
 
     private void logUpdatedComplexes(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
-        updatedComplexesReportWriter.write(
-                complex.getComplexIds(),
-                complex.getConfidence(),
-                complex.getProteinIds(),
-                existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
-                qualifier);
+        if (!existingComplexes.isEmpty()) {
+            updatedComplexesReportWriter.write(
+                    complex.getComplexIds(),
+                    complex.getConfidence(),
+                    complex.getProteinIds(),
+                    existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
+                    qualifier);
+        }
     }
 }
