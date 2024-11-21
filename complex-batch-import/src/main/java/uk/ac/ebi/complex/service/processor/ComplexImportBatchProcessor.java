@@ -43,7 +43,6 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
 
     @Override
     public ComplexWithMatches<T, R> process(R item) throws Exception {
-        log.info("Processing item: " + String.join(",", item.getComplexIds()));
         try {
             ComplexFinderResult<IntactComplex> complexFinderResult = this.complexFinder.findComplexWithMatchingProteins(
                     item.getProteinIds(),
