@@ -8,7 +8,7 @@ public class UniplexClusterWriter extends ComplexFileWriter<Integer, UniplexClus
 
     @Override
     protected String[] headerLine() {
-        return new String[]{"ids", "confidence", "uniprot_acs"};
+        return new String[]{"ids", "confidence", "proteins"};
     }
 
     @Override

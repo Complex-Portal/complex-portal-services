@@ -103,7 +103,7 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         addIdentityXrefs(newComplex, complex);
         addConfidenceAnnotation(newComplex, complex);
         setComplexComponents(newComplex, complex);
-        addNames(newComplex, complex);
+        setComplexSystematicName(complex);
         setComplexStatus(complex);
         setExperimentAndPublication(complex);
         complex.setPredictedComplex(true);
@@ -114,28 +114,37 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     }
 
     protected boolean doesComplexNeedXref(R newComplex, IntactComplex existingComplex, String databaseMi, String qualifierMi) {
-        Collection<Xref> existingXrefs = getXrefs(existingComplex, databaseMi, qualifierMi);
         for (String clusterId: newComplex.getComplexIds()) {
             // If any of the cluster ids is missing, then the complex needs updating
-            if (existingXrefs.stream().noneMatch(id -> id.getId().equals(clusterId))) {
+            if (doesComplexNeedXref(clusterId, existingComplex, databaseMi, qualifierMi)) {
                 return true;
             }
         }
         return false;
     }
 
-    protected void addXrefs(R newComplex, IntactComplex existingComplex, String databaseMi, String qualifierMi, boolean isIdentifier) throws CvTermNotFoundException {
+    protected boolean doesComplexNeedXref(String xrefId, IntactComplex existingComplex, String databaseMi, String qualifierMi) {
         Collection<Xref> existingXrefs = getXrefs(existingComplex, databaseMi, qualifierMi);
+        // If any of the cluster ids is missing, then the complex needs updating
+        return existingXrefs.stream().noneMatch(id -> id.getId().equals(xrefId));
+    }
+
+    protected void addXrefs(R newComplex, IntactComplex existingComplex, String databaseMi, String qualifierMi, boolean isIdentifier) throws CvTermNotFoundException {
         for (String clusterId: newComplex.getComplexIds()) {
-            if (existingXrefs.stream().noneMatch(id -> id.getId().equals(clusterId))) {
-                InteractorXref xref = newXref(clusterId, databaseMi, qualifierMi);
-                // We add the new xrefs to identifiers as we are using the identity qualifier.
-                // If we eventually use another qualifier, we should add them to xrefs.
-                if (isIdentifier) {
-                    existingComplex.getIdentifiers().add(xref);
-                } else {
-                    existingComplex.getXrefs().add(xref);
-                }
+            addXrefs(clusterId, existingComplex, databaseMi, qualifierMi, isIdentifier);
+        }
+    }
+
+    protected void addXrefs(String xrefId, IntactComplex existingComplex, String databaseMi, String qualifierMi, boolean isIdentifier) throws CvTermNotFoundException {
+        Collection<Xref> existingXrefs = getXrefs(existingComplex, databaseMi, qualifierMi);
+        if (existingXrefs.stream().noneMatch(id -> id.getId().equals(xrefId))) {
+            InteractorXref xref = newXref(xrefId, databaseMi, qualifierMi);
+            // We add the new xrefs to identifiers as we are using the identity qualifier.
+            // If we eventually use another qualifier, we should add them to xrefs.
+            if (isIdentifier) {
+                existingComplex.getIdentifiers().add(xref);
+            } else {
+                existingComplex.getXrefs().add(xref);
             }
         }
     }
@@ -177,8 +186,6 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     protected abstract void addConfidenceAnnotation(R newComplex, IntactComplex exsitingComplex) throws CvTermNotFoundException;
 
     protected abstract void setComplexSource(IntactComplex complex) throws SourceNotFoundException;
-
-    protected abstract void addNames(R newComplex, IntactComplex existingComplex);
 
     private void setExperimentAndPublication(IntactComplex complex) {
         IntactUtils.createAndAddDefaultExperimentForComplexes(complex, READY_FOR_RELEASE_COMPLEX_PUBMED_ID);

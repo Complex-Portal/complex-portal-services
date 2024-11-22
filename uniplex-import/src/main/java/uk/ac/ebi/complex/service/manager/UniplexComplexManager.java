@@ -90,10 +90,4 @@ public class UniplexComplexManager extends ComplexManager<Integer, UniplexCluste
         IntactSource source = findSource(HUMAP_INSTITUION_ID);
         complex.setSource(source);
     }
-
-
-    @Override
-    protected void addNames(UniplexCluster newComplex, IntactComplex existingComplex) {
-        setComplexSystematicName(existingComplex);
-    }
 }

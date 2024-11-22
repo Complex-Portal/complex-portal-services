@@ -3,9 +3,10 @@ package uk.ac.ebi.complex.service.processor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Component;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
+import uk.ac.ebi.complex.service.config.MusicImportAppProperties;
 import uk.ac.ebi.complex.service.model.MusicComplexToImport;
 import uk.ac.ebi.complex.service.model.UniprotProtein;
-import uk.ac.ebi.complex.service.reader.MusicComplexWithConfidenceReader;
+import uk.ac.ebi.complex.service.reader.MusicComplexReader;
 import uk.ac.ebi.complex.service.service.UniProtMappingService;
 import uk.ac.ebi.complex.service.writer.MusicComplexWriter;
 
@@ -24,7 +25,7 @@ public class MusicFileProcessor extends ComplexFileProcessor<Double, MusicComple
     private final UniProtMappingService uniProtMappingService;
 
     public MusicFileProcessor(FileConfiguration fileConfiguration,
-                              MusicComplexWithConfidenceReader musicComplexReader,
+                              MusicComplexReader musicComplexReader,
                               MusicComplexWriter musicComplexWriter,
                               UniProtMappingService uniProtMappingService) throws IOException {
 
@@ -52,7 +53,17 @@ public class MusicFileProcessor extends ComplexFileProcessor<Double, MusicComple
         List<String> ids = Stream.concat(complexA.getComplexIds().stream(), complexB.getComplexIds().stream())
                 .distinct()
                 .collect(Collectors.toList());
-        Double confidence = Double.max(complexA.getConfidence(), complexB.getConfidence());
+
+        Double confidence = null;
+        if (complexA.getConfidence() != null) {
+            if (complexB.getConfidence() != null) {
+                confidence = Double.max(complexA.getConfidence(), complexB.getConfidence());
+            } else {
+                confidence = complexA.getConfidence();
+            }
+        } else if (complexB.getConfidence() != null) {
+            confidence = complexB.getConfidence();
+        }
 
         return MusicComplexToImport.builder()
                 .name(name)
@@ -76,10 +87,20 @@ public class MusicFileProcessor extends ComplexFileProcessor<Double, MusicComple
                 .header(Boolean.parseBoolean(args[4]))
                 .build();
 
+        MusicImportAppProperties musicImportAppProperties = MusicImportAppProperties.builder()
+                .inputFileFieldsString("ids,proteins,confidence")
+                .build();
+
         MusicFileProcessor musicFileProcessor = new MusicFileProcessor(
                 c,
-                MusicComplexWithConfidenceReader.builder().fileConfiguration(c).build(),
-                MusicComplexWriter.builder().fileConfiguration(c).build(),
+                MusicComplexReader.builder()
+                        .fileConfiguration(c)
+                        .musicImportAppProperties(musicImportAppProperties)
+                        .build(),
+                MusicComplexWriter.builder()
+                        .fileConfiguration(c)
+                        .musicImportAppProperties(musicImportAppProperties)
+                        .build(),
                 new UniProtMappingService());
         musicFileProcessor.processFile();
     }

@@ -11,12 +11,15 @@ public class UniplexClusterReader extends ComplexFileReader<Integer, UniplexClus
 
     @Override
     protected UniplexCluster complexFromStringArray(String[] csvLine) {
-        String clusterId = csvLine[0];
+        String[] clusterIds = csvLine[0].split(" ");
         String clusterConfidence = csvLine[1];
         String[] uniprotAcs = csvLine[2].split(" ");
 
         return UniplexCluster.builder()
-                .complexIds(Collections.singletonList(clusterId))
+                .complexIds(Arrays.stream(clusterIds)
+                        .sorted()
+                        .distinct()
+                        .collect(Collectors.toList()))
                 .confidence(Integer.parseInt(clusterConfidence))
                 .proteinIds(Arrays.stream(uniprotAcs)
                         .sorted()

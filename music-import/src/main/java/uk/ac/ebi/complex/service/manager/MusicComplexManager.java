@@ -2,8 +2,11 @@ package uk.ac.ebi.complex.service.manager;
 
 import lombok.experimental.SuperBuilder;
 import psidev.psi.mi.jami.bridges.exception.BridgeFailedException;
+import psidev.psi.mi.jami.model.Alias;
 import psidev.psi.mi.jami.model.Annotation;
 import psidev.psi.mi.jami.model.Xref;
+import psidev.psi.mi.jami.utils.AliasUtils;
+import uk.ac.ebi.complex.service.config.MusicImportAppProperties;
 import uk.ac.ebi.complex.service.exception.CvTermNotFoundException;
 import uk.ac.ebi.complex.service.exception.OrganismNotFoundException;
 import uk.ac.ebi.complex.service.exception.ProteinException;
@@ -13,27 +16,42 @@ import uk.ac.ebi.complex.service.model.MusicComplexToImport;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.model.extension.IntactCvTerm;
 import uk.ac.ebi.intact.jami.model.extension.IntactSource;
+import uk.ac.ebi.intact.jami.model.extension.InteractorAlias;
 import uk.ac.ebi.intact.jami.model.extension.InteractorAnnotation;
 import uk.ac.ebi.intact.jami.synchronizer.FinderException;
 import uk.ac.ebi.intact.jami.synchronizer.PersisterException;
 import uk.ac.ebi.intact.jami.synchronizer.SynchronizerException;
 import uk.ac.ebi.intact.jami.utils.IntactUtils;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 @SuperBuilder
 public class MusicComplexManager extends ComplexManager<Double, MusicComplexToImport> {
 
-    // TODO: update these values
     private static final String AUTHOR_CONFIDENCE_TOPIC_ID = "MI:0621";
     private static final String ML_ECO_CODE = "ECO:0008004";
-    private static final String HUMAP_DATABASE_ID = "MI:2424";
-    private static final String HUMAP_INSTITUION_ID = "MI:2424";
+    private static final String EFO_DATABASE_ID = "MI:1337";
+    private static final String MUSIC_DATABASE_ID = "IA:3605";
+    private static final String MUSIC_INSTITUION_ID = "IA:3605";
+
+    private final MusicImportAppProperties musicImportAppProperties;
 
     @Override
     public IntactComplex mergeComplexWithExistingComplex(MusicComplexToImport newComplex, IntactComplex existingComplex) throws CvTermNotFoundException {
         IntactComplex mergedComplex = super.mergeComplexWithExistingComplex(newComplex, existingComplex);
-        setCellLine(newComplex, mergedComplex);
+
+        List<Alias> synonyms = new ArrayList<>(AliasUtils.collectAllAliasesHavingType(mergedComplex.getAliases(), Alias.COMPLEX_SYNONYM_MI, Alias.COMPLEX_SYNONYM));
+        if (newComplex.getName() != null && !newComplex.getName().isEmpty()) {
+            if (synonyms.stream().noneMatch(synonym -> newComplex.getName().equals(synonym.getName()))) {
+                IntactCvTerm complexSynonymTerm = findCvTerm(IntactUtils.ALIAS_TYPE_OBJCLASS, Alias.COMPLEX_SYNONYM_MI);
+                Alias newSynonym = new InteractorAlias(complexSynonymTerm, newComplex.getName());
+                mergedComplex.getAliases().add(newSynonym);
+            }
+        }
+        setExtraXrefs(mergedComplex);
+
         return mergedComplex;
     }
 
@@ -43,35 +61,55 @@ public class MusicComplexManager extends ComplexManager<Double, MusicComplexToIm
             SourceNotFoundException, CvTermNotFoundException, ProteinException, UserNotFoundException,
             OrganismNotFoundException {
         IntactComplex intactComplex = super.newComplex(newComplex);
-        setCellLine(newComplex, intactComplex);
+
+        if (newComplex.getName() != null && !newComplex.getName().isEmpty()) {
+            intactComplex.setRecommendedName(newComplex.getName());
+        }
+        setExtraXrefs(intactComplex);
+
         return intactComplex;
     }
 
     @Override
     public boolean doesComplexHasIdentityXref(MusicComplexToImport newComplex, IntactComplex existingComplex) {
-        return !doesComplexNeedXref(newComplex, existingComplex, HUMAP_DATABASE_ID, Xref.IDENTITY_MI);
+        return !doesComplexNeedXref(newComplex, existingComplex, MUSIC_DATABASE_ID, Xref.IDENTITY_MI);
     }
 
     @Override
     public boolean doesComplexNeedUpdating(MusicComplexToImport newComplex, IntactComplex existingComplex) {
         // If any of the cluster ids is missing, then the complex needs updating
-        if (doesComplexNeedXref(newComplex, existingComplex, HUMAP_DATABASE_ID, Xref.IDENTITY_MI)) {
+        if (doesComplexNeedXref(newComplex, existingComplex, MUSIC_DATABASE_ID, Xref.IDENTITY_MI)) {
             return true;
         }
 
-        // If the confidence does not match, then the complex needs updating
-        Collection<Annotation> existingConfidenceAnnotations = getAuthorConfidenceAnnotations(existingComplex);
-        return existingConfidenceAnnotations.stream().noneMatch(ann -> ann.getValue().equals(newComplex.getConfidence().toString()));
+        if (newComplex.getConfidence() != null) {
+            Collection<Annotation> existingConfidenceAnnotations = getAuthorConfidenceAnnotations(existingComplex);
+            if (existingConfidenceAnnotations.stream().noneMatch(ann -> ann.getValue().equals(newComplex.getConfidence().toString()))) {
+                return true;
+            }
+        }
+
+        if (musicImportAppProperties.getCellLine() != null && !musicImportAppProperties.getCellLine().isEmpty()) {
+            if (doesComplexNeedXref(musicImportAppProperties.getCellLine(), existingComplex, EFO_DATABASE_ID, Xref.IDENTITY_MI)) {
+                return true;
+            }
+        }
+
+        if (musicImportAppProperties.getPublicationId() != null && !musicImportAppProperties.getPublicationId().isEmpty()) {
+            return doesComplexNeedXref(musicImportAppProperties.getPublicationId(), existingComplex, Xref.PUBMED_MI, Xref.SEE_ALSO_MI);
+        }
+
+        return false;
     }
 
     @Override
     public boolean doesComplexNeedSubsetXref(MusicComplexToImport newComplex, IntactComplex existingComplex) {
-        return doesComplexNeedXref(newComplex, existingComplex, HUMAP_DATABASE_ID, SUBSET_QUALIFIER_MI);
+        return doesComplexNeedXref(newComplex, existingComplex, MUSIC_DATABASE_ID, SUBSET_QUALIFIER_MI);
     }
 
     @Override
     public boolean doesComplexNeedComplexClusterXref(MusicComplexToImport newComplex, IntactComplex existingComplex) {
-        return doesComplexNeedXref(newComplex, existingComplex, HUMAP_DATABASE_ID, COMPLEX_CLUSTER_QUALIFIER_MI);
+        return doesComplexNeedXref(newComplex, existingComplex, MUSIC_DATABASE_ID, COMPLEX_CLUSTER_QUALIFIER_MI);
     }
 
     @Override
@@ -84,18 +122,18 @@ public class MusicComplexManager extends ComplexManager<Double, MusicComplexToIm
 
     @Override
     protected void addIdentityXrefs(MusicComplexToImport newComplex, IntactComplex existingComplex) throws CvTermNotFoundException {
-        addXrefs(newComplex, existingComplex, HUMAP_DATABASE_ID, Xref.IDENTITY_MI, true);
+        addXrefs(newComplex, existingComplex, MUSIC_DATABASE_ID, Xref.IDENTITY_MI, true);
     }
 
     @Override
     public IntactComplex addSubsetXrefs(MusicComplexToImport newComplex, IntactComplex existingComplex) throws CvTermNotFoundException {
-        addXrefs(newComplex, existingComplex, HUMAP_DATABASE_ID, SUBSET_QUALIFIER_MI, false);
+        addXrefs(newComplex, existingComplex, MUSIC_DATABASE_ID, SUBSET_QUALIFIER_MI, false);
         return existingComplex;
     }
 
     @Override
     public IntactComplex addComplexClusterXrefs(MusicComplexToImport newComplex, IntactComplex existingComplex) throws CvTermNotFoundException {
-        addXrefs(newComplex, existingComplex, HUMAP_DATABASE_ID, COMPLEX_CLUSTER_QUALIFIER_MI, false);
+        addXrefs(newComplex, existingComplex, MUSIC_DATABASE_ID, COMPLEX_CLUSTER_QUALIFIER_MI, false);
         return existingComplex;
     }
 
@@ -113,21 +151,16 @@ public class MusicComplexManager extends ComplexManager<Double, MusicComplexToIm
 
     @Override
     protected void setComplexSource(IntactComplex complex) throws SourceNotFoundException {
-        IntactSource source = findSource(HUMAP_INSTITUION_ID);
+        IntactSource source = findSource(MUSIC_INSTITUION_ID);
         complex.setSource(source);
     }
 
-    @Override
-    protected void addNames(MusicComplexToImport newComplex, IntactComplex existingComplex) {
-        setComplexSystematicName(existingComplex);
-        if (newComplex.getName() != null && !newComplex.getName().isEmpty()) {
-            // TODO: verify which name to use
-            // TODO: should we add some sort of name for merged complexes?
-            existingComplex.setRecommendedName(newComplex.getName());
+    private void setExtraXrefs(IntactComplex existingComplex) throws CvTermNotFoundException {
+        if (musicImportAppProperties.getCellLine() != null && !musicImportAppProperties.getCellLine().isEmpty()) {
+            addXrefs(musicImportAppProperties.getCellLine(), existingComplex, EFO_DATABASE_ID, Xref.IDENTITY_MI, false);
         }
-    }
-
-    private void setCellLine(MusicComplexToImport newComplex, IntactComplex existingComplex) {
-        // TODO: ass cell line xref
+        if (musicImportAppProperties.getPublicationId() != null && !musicImportAppProperties.getPublicationId().isEmpty()) {
+            addXrefs(musicImportAppProperties.getPublicationId(), existingComplex, Xref.PUBMED_MI, Xref.SEE_ALSO_MI, false);
+        }
     }
 }
