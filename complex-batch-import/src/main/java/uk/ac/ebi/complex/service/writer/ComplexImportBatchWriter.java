@@ -26,11 +26,11 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
 
     private final ComplexManager<T, R> complexManager;
 
-    private WriteReportWriter<T> newComplexesReportWriter;
-    private WriteReportWriter<T> updatedComplexesReportWriter;
-    private WriteReportWriter<T> complexesToCreateReportWriter;
-    private WriteReportWriter<T> complexesToUpdateReportWriter;
-    private WriteReportWriter<T> complexesUnchangedReportWriter;
+    private WriteReportWriter newComplexesReportWriter;
+    private WriteReportWriter updatedComplexesReportWriter;
+    private WriteReportWriter complexesToCreateReportWriter;
+    private WriteReportWriter complexesToUpdateReportWriter;
+    private WriteReportWriter complexesUnchangedReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
     @Override
@@ -168,16 +168,16 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();
 
-        this.newComplexesReportWriter = new WriteReportWriter<>(
+        this.newComplexesReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "new_complexes" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
-        this.updatedComplexesReportWriter = new WriteReportWriter<>(
+        this.updatedComplexesReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "updated_complexes" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
 
-        this.complexesToCreateReportWriter = new WriteReportWriter<>(
+        this.complexesToCreateReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "complexes_to_create" + extension), separator, header, WriteReportWriter.NEW_COMPLEXES_LINE);
-        this.complexesToUpdateReportWriter = new WriteReportWriter<>(
+        this.complexesToUpdateReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "complexes_to_update" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
-        this.complexesUnchangedReportWriter = new WriteReportWriter<>(
+        this.complexesUnchangedReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "complexes_unchanged" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
 
         this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "write_errors" + extension), separator, header);
@@ -186,7 +186,6 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
     private void logNewComplexToCreate(R complex) throws IOException {
         complexesToCreateReportWriter.write(
                 complex.getComplexIds(),
-                complex.getConfidence(),
                 complex.getProteinIds(),
                 List.of(),
                 Xref.IDENTITY);
@@ -195,7 +194,6 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
     private void logComplexesToUpdate(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
         complexesToUpdateReportWriter.write(
                 complex.getComplexIds(),
-                complex.getConfidence(),
                 complex.getProteinIds(),
                 existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
                 qualifier);
@@ -204,7 +202,6 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
     private void logUnchangedComplexes(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
         complexesUnchangedReportWriter.write(
                 complex.getComplexIds(),
-                complex.getConfidence(),
                 complex.getProteinIds(),
                 existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
                 qualifier);
@@ -214,7 +211,6 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         if (!newComplexes.isEmpty()) {
             newComplexesReportWriter.write(
                     complex.getComplexIds(),
-                    complex.getConfidence(),
                     complex.getProteinIds(),
                     newComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
                     Xref.IDENTITY);
@@ -225,7 +221,6 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         if (!existingComplexes.isEmpty()) {
             updatedComplexesReportWriter.write(
                     complex.getComplexIds(),
-                    complex.getConfidence(),
                     complex.getProteinIds(),
                     existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
                     qualifier);
