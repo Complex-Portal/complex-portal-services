@@ -312,7 +312,7 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         if (sourcesByXref != null && !sourcesByXref.isEmpty()) {
             for (IntactSource sourceByXref: sourcesByXref) {
                 if (sourceByXref.getIdentifiers().stream().anyMatch(xrefId -> id.equals(xrefId.getId()))) {
-                    sourceMap.put(id, source);
+                    sourceMap.put(id, sourceByXref);
                     return sourceByXref;
                 }
             }
