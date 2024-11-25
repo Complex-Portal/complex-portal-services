@@ -122,4 +122,24 @@ public class UniProtMappingServiceTest {
             assertEquals(genesToMap.get(gene), proteins.get(0).getProteinAc());
         });
     }
+
+    @Test
+    public void testMapGenesWithAmbiguousMappings() {
+        Map<String, String> genesToMap = ImmutableMap.<String, String>builder()
+                .put("AKAP7", "O43687")
+                .put("TOR1AIP2", "Q8NFQ8")
+                .put("PMF1-BGLAP", "U3KQ54")
+                .put("POLR2M", "P0CAP2")
+                .put("POLR1D", "P0DPB6")
+                .put("ZNF689", "Q96CS4")
+                .put("COMMD3-BMI1", "R4GMX3")
+                .put("GNAS", "Q5JWF2")
+                .build();
+
+        Map<String, List<UniprotProtein>> mapping = uniProtMappingService.mapGenes(genesToMap.keySet());
+        mapping.forEach((gene, proteins) -> {
+            assertEquals(1, proteins.size());
+            assertEquals(genesToMap.get(gene), proteins.get(0).getProteinAc());
+        });
+    }
 }
