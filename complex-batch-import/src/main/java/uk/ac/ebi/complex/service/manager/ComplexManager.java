@@ -308,6 +308,15 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
             sourceMap.put(id, source);
             return source;
         }
+        Collection<IntactSource> sourcesByXref = intactDao.getSourceDao().getByXref(id);
+        if (sourcesByXref != null && !sourcesByXref.isEmpty()) {
+            for (IntactSource sourceByXref: sourcesByXref) {
+                if (sourceByXref.getIdentifiers().stream().anyMatch(xrefId -> id.equals(xrefId.getId()))) {
+                    sourceMap.put(id, source);
+                    return sourceByXref;
+                }
+            }
+        }
         throw new SourceNotFoundException("Source not found with id '" + id + "'");
     }
 
