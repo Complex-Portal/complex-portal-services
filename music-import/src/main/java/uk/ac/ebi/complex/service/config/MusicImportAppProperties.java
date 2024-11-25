@@ -61,6 +61,9 @@ public class MusicImportAppProperties {
     }
 
     public String getFieldValuesSeparator() {
-        return fieldValuesSeparator != null ? fieldValuesSeparator : " ";
+        if (fieldValuesSeparator == null || fieldValuesSeparator.isEmpty()) {
+            return " ";
+        }
+        return fieldValuesSeparator;
     }
 }

@@ -24,11 +24,18 @@ OUTPUT_DIRECTORY=$4
 SEPARATOR=$5
 HEADER=$6
 
+CELL_LINE=CLO:0037372
+PUBLICATION_ID=34819669
+INPUT_FILE_FIELDS=ids,proteins,confidence
+
 echo "Profile: $PROFILE"
 echo "User id: $USER_ID"
 echo "Input file: $INPUT_FILE"
 echo "Output directory: $OUTPUT_DIRECTORY"
 echo "Separator: $SEPARATOR"
 echo "Header: $HEADER"
+echo "Cell line: $CELL_LINE"
+echo "Publication id: $PUBLICATION_ID"
+echo "Input file fields: $INPUT_FILE_FIELDS"
 
-mvn clean -U install -P import-music-complexes,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=musicComplexesImport -Dinput.file.name=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -Dmusic.cell.line=EFO:0001082 -Dmusic.publication.id=PMID:34819669 -Dmusic.input.file.fields=name,proteins,ids -Dmusic.field.values.separator=, -DskipTests
+mvn clean -U install -P import-music-complexes,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=musicComplexesImport -Dinput.file.name=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -Dmusic.cell.line=$CELL_LINE -Dmusic.publication.id=$PUBLICATION_ID -Dmusic.input.file.fields=$INPUT_FILE_FIELDS -Dmusic.field.values.separator=, -DskipTests
