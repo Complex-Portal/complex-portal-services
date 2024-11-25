@@ -40,6 +40,7 @@ import uk.ac.ebi.intact.jami.utils.IntactUtils;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -310,11 +311,12 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         }
         Collection<IntactSource> sourcesByXref = intactDao.getSourceDao().getByXref(id);
         if (sourcesByXref != null && !sourcesByXref.isEmpty()) {
-            for (IntactSource sourceByXref: sourcesByXref) {
-                if (sourceByXref.getIdentifiers().stream().anyMatch(xrefId -> id.equals(xrefId.getId()))) {
-                    sourceMap.put(id, sourceByXref);
-                    return sourceByXref;
-                }
+            List<IntactSource> sourcesWithIdentifier = sourcesByXref.stream()
+                    .filter(sourceByXref -> sourceByXref.getIdentifiers().stream().anyMatch(xrefId -> id.equals(xrefId.getId())))
+                    .collect(Collectors.toList());
+            if (sourcesWithIdentifier.size() == 1) {
+                sourceMap.put(id, sourcesWithIdentifier.get(0));
+                return sourcesWithIdentifier.get(0);
             }
         }
         throw new SourceNotFoundException("Source not found with id '" + id + "'");
