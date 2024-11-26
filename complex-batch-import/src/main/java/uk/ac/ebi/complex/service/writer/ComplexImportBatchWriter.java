@@ -15,9 +15,10 @@ import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleStatus;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Log4j
@@ -70,10 +71,10 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
 
     @Override
     public void write(List<? extends ComplexWithMatches<T, R>> items) throws Exception {
-        List<IntactComplex> newComplexes = new ArrayList<>();
-        List<IntactComplex> updatedIdentityComplexes = new ArrayList<>();
-        List<IntactComplex> updatedSubsetComplexes = new ArrayList<>();
-        List<IntactComplex> updatedComplexClusterComplexes = new ArrayList<>();
+        Map<String, IntactComplex> newComplexes = new HashMap<>();
+        Map<String, IntactComplex> updatedIdentityComplexes = new HashMap<>();
+        Map<String, IntactComplex> updatedSubsetComplexes = new HashMap<>();
+        Map<String, IntactComplex> updatedComplexClusterComplexes = new HashMap<>();
 
         for (ComplexWithMatches<T, R> complexWithMatches: items) {
             R complexToImport = complexWithMatches.getComplexToImport();
@@ -89,7 +90,9 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                             if (appProperties.isDryRunMode()) {
                                 logComplexesToUpdate(complexToImport, List.of(existingComplex), Xref.IDENTITY);
                             } else {
-                                updatedIdentityComplexes.add(complexManager.mergeComplexWithExistingComplex(complexToImport, existingComplex));
+                                updatedIdentityComplexes.put(
+                                        complexToImport.getComplexIds().iterator().next(),
+                                        complexManager.mergeComplexWithExistingComplex(complexToImport, existingComplex));
                             }
                         } else {
                             logUnchangedComplexes(complexToImport, List.of(existingComplex), Xref.IDENTITY);
@@ -99,7 +102,9 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                     if (appProperties.isDryRunMode()) {
                         logNewComplexToCreate(complexToImport);
                     } else {
-                        newComplexes.add(complexManager.newComplex(complexToImport));
+                        newComplexes.put(
+                                complexToImport.getComplexIds().iterator().next(),
+                                complexManager.newComplex(complexToImport));
                     }
                 }
 
@@ -144,10 +149,10 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         }
 
         if (!appProperties.isDryRunMode()) {
-            this.complexService.saveOrUpdate(newComplexes);
-            this.complexService.saveOrUpdate(updatedIdentityComplexes);
-            this.complexService.saveOrUpdate(updatedSubsetComplexes);
-            this.complexService.saveOrUpdate(updatedComplexClusterComplexes);
+            this.complexService.saveOrUpdate(newComplexes.values());
+            this.complexService.saveOrUpdate(updatedIdentityComplexes.values());
+            this.complexService.saveOrUpdate(updatedSubsetComplexes.values());
+            this.complexService.saveOrUpdate(updatedComplexClusterComplexes.values());
 
             for (ComplexWithMatches<T, R> complexWithMatches : items) {
                 R complexToImport = complexWithMatches.getComplexToImport();
@@ -207,22 +212,32 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                 qualifier);
     }
 
-    private void logNewComplexes(R complex, Collection<IntactComplex> newComplexes) throws IOException {
+    private void logNewComplexes(R complex, Map<String, IntactComplex> newComplexes) throws IOException {
         if (!newComplexes.isEmpty()) {
+            String complexId = complex.getComplexIds().iterator().next();
             newComplexesReportWriter.write(
                     complex.getComplexIds(),
                     complex.getProteinIds(),
-                    newComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
+                    newComplexes.entrySet()
+                            .stream()
+                            .filter(e -> complexId.equals(e.getKey()))
+                            .map(e -> e.getValue().getComplexAc())
+                            .collect(Collectors.toList()),
                     Xref.IDENTITY);
         }
     }
 
-    private void logUpdatedComplexes(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
+    private void logUpdatedComplexes(R complex, Map<String, IntactComplex> existingComplexes, String qualifier) throws IOException {
         if (!existingComplexes.isEmpty()) {
+            String complexId = complex.getComplexIds().iterator().next();
             updatedComplexesReportWriter.write(
                     complex.getComplexIds(),
                     complex.getProteinIds(),
-                    existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
+                    existingComplexes.entrySet()
+                            .stream()
+                            .filter(e -> complexId.equals(e.getKey()))
+                            .map(e -> e.getValue().getComplexAc())
+                            .collect(Collectors.toList()),
                     qualifier);
         }
     }
