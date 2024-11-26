@@ -26,7 +26,7 @@ HEADER=$6
 
 CELL_LINE=CLO:0037372
 PUBLICATION_ID=34819669
-INPUT_FILE_FIELDS=ids,proteins,confidence
+INPUT_FILE_FIELDS=name,proteins,ids
 
 echo "Profile: $PROFILE"
 echo "User id: $USER_ID"
