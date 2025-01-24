@@ -30,6 +30,7 @@
         <module>complex-batch-import</module>
         <module>uniplex-import</module>
         <module>music-import</module>
+        <module>pdb-import</module>
     </modules>
 
     <scm>

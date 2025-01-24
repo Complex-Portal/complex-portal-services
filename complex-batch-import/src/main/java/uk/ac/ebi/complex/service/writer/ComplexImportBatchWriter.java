@@ -111,11 +111,11 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                 // Subset matches
                 for (IntactComplex existingComplex : complexWithMatches.getComplexesToAddSubsetXref()) {
                     if (complexManager.doesComplexNeedSubsetXref(complexToImport, existingComplex)) {
-//                        if (appProperties.isDryRunMode()) {
+                        if (appProperties.isDryRunMode()) {
                             logComplexesToUpdate(complexToImport, List.of(existingComplex), ComplexManager.SUBSET_QUALIFIER);
-//                        } else {
-//                            updatedSubsetComplexes.add(complexManager.addSubsetXrefs(complexToImport, existingComplex));
-//                        }
+                        } else {
+                            updatedSubsetComplexes.add(complexManager.addSubsetXrefs(complexToImport, existingComplex));
+                        }
                     } else {
                         logUnchangedComplexes(complexToImport, List.of(existingComplex), ComplexManager.SUBSET_QUALIFIER);
                     }
@@ -128,15 +128,15 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                     for (IntactComplex existingComplex : complexCluster) {
                         if (complexManager.doesComplexNeedComplexClusterXref(complexToImport, existingComplex)) {
                             complexToUpdateFound = true;
-//                            if (!appProperties.isDryRunMode()) {
-//                                updatedComplexClusterComplexes.add(complexManager.addComplexClusterXrefs(complexToImport, existingComplex));
-//                            }
+                            if (!appProperties.isDryRunMode()) {
+                                updatedComplexClusterComplexes.add(complexManager.addComplexClusterXrefs(complexToImport, existingComplex));
+                            }
                         }
                     }
                     if (complexToUpdateFound) {
-//                        if (appProperties.isDryRunMode()) {
+                        if (appProperties.isDryRunMode()) {
                             logComplexesToUpdate(complexToImport, complexCluster, ComplexManager.COMPLEX_CLUSTER_QUALIFIER);
-//                        }
+                        }
                     } else {
                         logUnchangedComplexes(complexToImport, complexCluster, ComplexManager.COMPLEX_CLUSTER_QUALIFIER);
                     }
