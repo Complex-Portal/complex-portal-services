@@ -216,13 +216,15 @@ public class UniPlexImportConfig {
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
             @Qualifier("processUniplexFile") Step processUniplexFile,
-            @Qualifier("uniplexClusterImportStep") Step importStep) throws Exception {
+            @Qualifier("uniplexClusterImportStep") Step importStep,
+            @Qualifier("deleteOldXrefsStep") Step deleteOldXrefsStep) throws Exception {
 
         return new JobBuilder("uniplexClusterImport")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
                 .start(processUniplexFile)
                 .next(importStep)
+                .next(deleteOldXrefsStep)
                 .build();
     }
 
