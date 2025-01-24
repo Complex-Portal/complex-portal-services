@@ -15,9 +15,10 @@ import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleStatus;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Log4j
@@ -26,11 +27,11 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
 
     private final ComplexManager<T, R> complexManager;
 
-    private WriteReportWriter<T> newComplexesReportWriter;
-    private WriteReportWriter<T> updatedComplexesReportWriter;
-    private WriteReportWriter<T> complexesToCreateReportWriter;
-    private WriteReportWriter<T> complexesToUpdateReportWriter;
-    private WriteReportWriter<T> complexesUnchangedReportWriter;
+    private WriteReportWriter newComplexesReportWriter;
+    private WriteReportWriter updatedComplexesReportWriter;
+    private WriteReportWriter complexesToCreateReportWriter;
+    private WriteReportWriter complexesToUpdateReportWriter;
+    private WriteReportWriter complexesUnchangedReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
     @Override
@@ -70,10 +71,10 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
 
     @Override
     public void write(List<? extends ComplexWithMatches<T, R>> items) throws Exception {
-        List<IntactComplex> newComplexes = new ArrayList<>();
-        List<IntactComplex> updatedIdentityComplexes = new ArrayList<>();
-        List<IntactComplex> updatedSubsetComplexes = new ArrayList<>();
-        List<IntactComplex> updatedComplexClusterComplexes = new ArrayList<>();
+        Map<String, IntactComplex> newComplexes = new HashMap<>();
+        Map<String, IntactComplex> updatedIdentityComplexes = new HashMap<>();
+        Map<String, IntactComplex> updatedSubsetComplexes = new HashMap<>();
+        Map<String, IntactComplex> updatedComplexClusterComplexes = new HashMap<>();
 
         for (ComplexWithMatches<T, R> complexWithMatches: items) {
             R complexToImport = complexWithMatches.getComplexToImport();
@@ -89,7 +90,9 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                             if (appProperties.isDryRunMode()) {
                                 logComplexesToUpdate(complexToImport, List.of(existingComplex), Xref.IDENTITY);
                             } else {
-                                updatedIdentityComplexes.add(complexManager.mergeComplexWithExistingComplex(complexToImport, existingComplex));
+                                updatedIdentityComplexes.put(
+                                        complexToImport.getComplexIds().iterator().next(),
+                                        complexManager.mergeComplexWithExistingComplex(complexToImport, existingComplex));
                             }
                         } else {
                             logUnchangedComplexes(complexToImport, List.of(existingComplex), Xref.IDENTITY);
@@ -99,7 +102,9 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                     if (appProperties.isDryRunMode()) {
                         logNewComplexToCreate(complexToImport);
                     } else {
-                        newComplexes.add(complexManager.newComplex(complexToImport));
+                        newComplexes.put(
+                                complexToImport.getComplexIds().iterator().next(),
+                                complexManager.newComplex(complexToImport));
                     }
                 }
 
@@ -144,10 +149,10 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         }
 
         if (!appProperties.isDryRunMode()) {
-            this.complexService.saveOrUpdate(newComplexes);
-            this.complexService.saveOrUpdate(updatedIdentityComplexes);
-            this.complexService.saveOrUpdate(updatedSubsetComplexes);
-            this.complexService.saveOrUpdate(updatedComplexClusterComplexes);
+            this.complexService.saveOrUpdate(newComplexes.values());
+            this.complexService.saveOrUpdate(updatedIdentityComplexes.values());
+            this.complexService.saveOrUpdate(updatedSubsetComplexes.values());
+            this.complexService.saveOrUpdate(updatedComplexClusterComplexes.values());
 
             for (ComplexWithMatches<T, R> complexWithMatches : items) {
                 R complexToImport = complexWithMatches.getComplexToImport();
@@ -168,16 +173,16 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();
 
-        this.newComplexesReportWriter = new WriteReportWriter<>(
+        this.newComplexesReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "new_complexes" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
-        this.updatedComplexesReportWriter = new WriteReportWriter<>(
+        this.updatedComplexesReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "updated_complexes" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
 
-        this.complexesToCreateReportWriter = new WriteReportWriter<>(
+        this.complexesToCreateReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "complexes_to_create" + extension), separator, header, WriteReportWriter.NEW_COMPLEXES_LINE);
-        this.complexesToUpdateReportWriter = new WriteReportWriter<>(
+        this.complexesToUpdateReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "complexes_to_update" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
-        this.complexesUnchangedReportWriter = new WriteReportWriter<>(
+        this.complexesUnchangedReportWriter = new WriteReportWriter(
                 new File(reportDirectory, "complexes_unchanged" + extension), separator, header, WriteReportWriter.UPDATE_COMPLEXES_LINE);
 
         this.errorReportWriter = new ErrorsReportWriter(new File(reportDirectory, "write_errors" + extension), separator, header);
@@ -186,7 +191,6 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
     private void logNewComplexToCreate(R complex) throws IOException {
         complexesToCreateReportWriter.write(
                 complex.getComplexIds(),
-                complex.getConfidence(),
                 complex.getProteinIds(),
                 List.of(),
                 Xref.IDENTITY);
@@ -195,7 +199,6 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
     private void logComplexesToUpdate(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
         complexesToUpdateReportWriter.write(
                 complex.getComplexIds(),
-                complex.getConfidence(),
                 complex.getProteinIds(),
                 existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
                 qualifier);
@@ -204,30 +207,37 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
     private void logUnchangedComplexes(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
         complexesUnchangedReportWriter.write(
                 complex.getComplexIds(),
-                complex.getConfidence(),
                 complex.getProteinIds(),
                 existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
                 qualifier);
     }
 
-    private void logNewComplexes(R complex, Collection<IntactComplex> newComplexes) throws IOException {
+    private void logNewComplexes(R complex, Map<String, IntactComplex> newComplexes) throws IOException {
         if (!newComplexes.isEmpty()) {
+            String complexId = complex.getComplexIds().iterator().next();
             newComplexesReportWriter.write(
                     complex.getComplexIds(),
-                    complex.getConfidence(),
                     complex.getProteinIds(),
-                    newComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
+                    newComplexes.entrySet()
+                            .stream()
+                            .filter(e -> complexId.equals(e.getKey()))
+                            .map(e -> e.getValue().getComplexAc())
+                            .collect(Collectors.toList()),
                     Xref.IDENTITY);
         }
     }
 
-    private void logUpdatedComplexes(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
+    private void logUpdatedComplexes(R complex, Map<String, IntactComplex> existingComplexes, String qualifier) throws IOException {
         if (!existingComplexes.isEmpty()) {
+            String complexId = complex.getComplexIds().iterator().next();
             updatedComplexesReportWriter.write(
                     complex.getComplexIds(),
-                    complex.getConfidence(),
                     complex.getProteinIds(),
-                    existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
+                    existingComplexes.entrySet()
+                            .stream()
+                            .filter(e -> complexId.equals(e.getKey()))
+                            .map(e -> e.getValue().getComplexAc())
+                            .collect(Collectors.toList()),
                     qualifier);
         }
     }

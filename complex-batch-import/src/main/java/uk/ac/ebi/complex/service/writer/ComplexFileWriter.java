@@ -28,11 +28,13 @@ public abstract class ComplexFileWriter<T, R extends ComplexToImport<T>> {
                 .build();
 
         if (fileConfiguration.isHeader()) {
-            csvWriter.writeNext(new String[]{"ids", "confidence", "uniprot_acs"});
+            csvWriter.writeNext(headerLine());
         }
         complexes.forEach(complex -> csvWriter.writeNext(complexToStringArray(complex)));
         csvWriter.close();
     }
+
+    protected abstract String[] headerLine();
 
     protected abstract String[] complexToStringArray(R complex);
 }

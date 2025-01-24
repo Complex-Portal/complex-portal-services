@@ -1,6 +1,7 @@
 package uk.ac.ebi.complex.service.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
@@ -40,6 +41,18 @@ import static uk.ac.ebi.complex.service.model.UniProt.IdMapping.Result.RESULT_UR
 @Log4j
 @Component
 public class UniProtMappingService {
+
+    // Custom mappings between gene names and protein ids that cannot be resolved programmatically
+    private static final Map<String, String> CUSTOM_PROTEIN_MAPPINGS = ImmutableMap.<String, String>builder()
+            .put("AKAP7", "O43687")
+            .put("TOR1AIP2", "Q8NFQ8")
+            .put("PMF1-BGLAP", "U3KQ54")
+            .put("POLR2M", "P0CAP2")
+            .put("POLR1D", "P0DPB6")
+            .put("ZNF689", "Q96CS4")
+            .put("COMMD3-BMI1", "R4GMX3")
+            .put("GNAS", "Q5JWF2")
+            .build();
 
     private final HttpClient client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -92,6 +105,19 @@ public class UniProtMappingService {
                 }
             }
         }
+
+        for (String gene : CUSTOM_PROTEIN_MAPPINGS.keySet()) {
+            if (filteredMappings.containsKey(gene) && filteredMappings.get(gene).size() > 1) {
+                List<UniprotProtein> filteredProteins = filteredMappings.get(gene)
+                        .stream()
+                        .filter(protein -> CUSTOM_PROTEIN_MAPPINGS.get(gene).equals(protein.getProteinAc()))
+                        .collect(Collectors.toList());
+                if (filteredProteins.size() == 1) {
+                    filteredMappings.put(gene, filteredProteins);
+                }
+            }
+        }
+
         return filteredMappings;
     }
 

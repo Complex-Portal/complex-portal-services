@@ -40,6 +40,7 @@ import uk.ac.ebi.intact.jami.utils.IntactUtils;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -103,7 +104,6 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         addIdentityXrefs(newComplex, complex);
         addConfidenceAnnotation(newComplex, complex);
         setComplexComponents(newComplex, complex);
-        // Systematic name is set after the components to have access to the gene names of the proteins
         setComplexSystematicName(complex);
         setComplexStatus(complex);
         setExperimentAndPublication(complex);
@@ -115,28 +115,37 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     }
 
     protected boolean doesComplexNeedXref(R newComplex, IntactComplex existingComplex, String databaseMi, String qualifierMi) {
-        Collection<Xref> existingXrefs = getXrefs(existingComplex, databaseMi, qualifierMi);
         for (String clusterId: newComplex.getComplexIds()) {
             // If any of the cluster ids is missing, then the complex needs updating
-            if (existingXrefs.stream().noneMatch(id -> id.getId().equals(clusterId))) {
+            if (doesComplexNeedXref(clusterId, existingComplex, databaseMi, qualifierMi)) {
                 return true;
             }
         }
         return false;
     }
 
-    protected void addXrefs(R newComplex, IntactComplex existingComplex, String databaseMi, String qualifierMi, boolean isIdentifier) throws CvTermNotFoundException {
+    protected boolean doesComplexNeedXref(String xrefId, IntactComplex existingComplex, String databaseMi, String qualifierMi) {
         Collection<Xref> existingXrefs = getXrefs(existingComplex, databaseMi, qualifierMi);
+        // If any of the cluster ids is missing, then the complex needs updating
+        return existingXrefs.stream().noneMatch(id -> id.getId().equals(xrefId));
+    }
+
+    protected void addXrefs(R newComplex, IntactComplex existingComplex, String databaseMi, String qualifierMi, boolean isIdentifier) throws CvTermNotFoundException {
         for (String clusterId: newComplex.getComplexIds()) {
-            if (existingXrefs.stream().noneMatch(id -> id.getId().equals(clusterId))) {
-                InteractorXref xref = newXref(clusterId, databaseMi, qualifierMi);
-                // We add the new xrefs to identifiers as we are using the identity qualifier.
-                // If we eventually use another qualifier, we should add them to xrefs.
-                if (isIdentifier) {
-                    existingComplex.getIdentifiers().add(xref);
-                } else {
-                    existingComplex.getXrefs().add(xref);
-                }
+            addXrefs(clusterId, existingComplex, databaseMi, qualifierMi, isIdentifier);
+        }
+    }
+
+    protected void addXrefs(String xrefId, IntactComplex existingComplex, String databaseMi, String qualifierMi, boolean isIdentifier) throws CvTermNotFoundException {
+        Collection<Xref> existingXrefs = getXrefs(existingComplex, databaseMi, qualifierMi);
+        if (existingXrefs.stream().noneMatch(id -> id.getId().equals(xrefId))) {
+            InteractorXref xref = newXref(xrefId, databaseMi, qualifierMi);
+            // We add the new xrefs to identifiers as we are using the identity qualifier.
+            // If we eventually use another qualifier, we should add them to xrefs.
+            if (isIdentifier) {
+                existingComplex.getIdentifiers().add(xref);
+            } else {
+                existingComplex.getXrefs().add(xref);
             }
         }
     }
@@ -244,7 +253,8 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         complex.getIdentifiers().add(xref);
     }
 
-    private void setComplexSystematicName(IntactComplex complex) {
+    protected void setComplexSystematicName(IntactComplex complex) {
+        // Systematic name is set after the components to have access to the gene names of the proteins
         String geneNamesConcatenated = complex.getParticipants()
                 .stream()
                 .map(Entity::getInteractor)
@@ -298,6 +308,16 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         if (source != null) {
             sourceMap.put(id, source);
             return source;
+        }
+        Collection<IntactSource> sourcesByXref = intactDao.getSourceDao().getByXref(id);
+        if (sourcesByXref != null && !sourcesByXref.isEmpty()) {
+            List<IntactSource> sourcesWithIdentifier = sourcesByXref.stream()
+                    .filter(sourceByXref -> sourceByXref.getIdentifiers().stream().anyMatch(xrefId -> id.equals(xrefId.getId())))
+                    .collect(Collectors.toList());
+            if (sourcesWithIdentifier.size() == 1) {
+                sourceMap.put(id, sourcesWithIdentifier.get(0));
+                return sourcesWithIdentifier.get(0);
+            }
         }
         throw new SourceNotFoundException("Source not found with id '" + id + "'");
     }

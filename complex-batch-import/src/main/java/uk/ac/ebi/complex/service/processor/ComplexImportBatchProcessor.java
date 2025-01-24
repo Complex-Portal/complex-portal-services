@@ -35,10 +35,10 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
     private final ComplexFinder complexFinder;
     private final ComplexManager<T, R> complexManager;
 
-    private ProcessReportWriter<T> exactMatchesReportWriter;
-    private ProcessReportWriter<T> multipleExactMatchesReportWriter;
-    private ProcessReportWriter<T> partialMatchesReportWriter;
-    private ProcessReportWriter<T> noMatchesReportWriter;
+    private ProcessReportWriter exactMatchesReportWriter;
+    private ProcessReportWriter multipleExactMatchesReportWriter;
+    private ProcessReportWriter partialMatchesReportWriter;
+    private ProcessReportWriter noMatchesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
     @Override
@@ -159,13 +159,13 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();
 
-        this.exactMatchesReportWriter = new ProcessReportWriter<>(
+        this.exactMatchesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "exact_matches" + extension), sep, header, ProcessReportWriter.EXACT_MATCH_HEADER_LINE);
-        this.multipleExactMatchesReportWriter = new ProcessReportWriter<>(
+        this.multipleExactMatchesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "multiple_exact_matches" + extension), sep, header, ProcessReportWriter.MULTIPLE_EXACT_MATCHES_HEADER_LINE);
-        this.partialMatchesReportWriter = new ProcessReportWriter<>(
+        this.partialMatchesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "partial_matches" + extension), sep, header, ProcessReportWriter.PARTIAL_MATCHES_HEADER_LINE);
-        this.noMatchesReportWriter = new ProcessReportWriter<>(
+        this.noMatchesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "no_matches" + extension), sep, header, ProcessReportWriter.NO_MATCH_HEADER_LINE);
         this.errorReportWriter = new ErrorsReportWriter(
                 new File(reportDirectory, "process_errors" + extension), sep, header);
@@ -287,7 +287,6 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
         exactMatchesReportWriter.write(
                 List.of(complexMatch.getMatchType()),
                 item.getComplexIds(),
-                item.getConfidence(),
                 item.getProteinIds(),
                 List.of(complexMatch.getComplexAc()),
                 List.of(complexMatch.isPredictedComplex()));
@@ -300,7 +299,6 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
         multipleExactMatchesReportWriter.write(
                 exactMatches.stream().map(ComplexFinderResult.ExactMatch::getMatchType).collect(Collectors.toList()),
                 item.getComplexIds(),
-                item.getConfidence(),
                 item.getProteinIds(),
                 exactMatches.stream().map(ComplexFinderResult.ExactMatch::getComplexAc).collect(Collectors.toList()),
                 exactMatches.stream().map(ComplexFinderResult.ExactMatch::isPredictedComplex).collect(Collectors.toList()));
@@ -327,7 +325,6 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
             partialMatchesReportWriter.write(
                     matchType,
                     item.getComplexIds(),
-                    item.getConfidence(),
                     item.getProteinIds(),
                     complexMatch.getComplexAc(),
                     complexMatch.isPredictedComplex(),
@@ -339,9 +336,6 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
     }
 
     private void logNoMatches(R item) throws IOException {
-        noMatchesReportWriter.write(
-                item.getComplexIds(),
-                item.getConfidence(),
-                item.getProteinIds());
+        noMatchesReportWriter.write(item.getComplexIds(), item.getProteinIds());
     }
 }
