@@ -3,17 +3,14 @@ package uk.ac.ebi.complex.service.processor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.stereotype.Component;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
-import uk.ac.ebi.complex.service.logging.FailedWriter;
 import uk.ac.ebi.complex.service.model.UniplexCluster;
+import uk.ac.ebi.complex.service.model.UniprotProtein;
 import uk.ac.ebi.complex.service.reader.UniplexClusterReader;
 import uk.ac.ebi.complex.service.service.UniProtMappingService;
 import uk.ac.ebi.complex.service.writer.UniplexClusterWriter;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,146 +19,45 @@ import java.util.stream.Stream;
 
 @Log4j
 @Component
-public class UniplexFileProcessor {
+public class UniplexFileProcessor extends ComplexFileProcessor<Integer, UniplexCluster> {
 
-    private final static int NUMBER_OF_COMPONENTS_LIMIT = 100;
-    private final static String COMPLEX_TOO_LARGE_ERROR = "Complex is too large, number of components = %d";
-
-    private final FileConfiguration fileConfiguration;
-    private final UniplexClusterReader uniplexClusterReader;
-    private final UniplexClusterWriter uniplexClusterWriter;
     private final UniProtMappingService uniProtMappingService;
-
-    private FailedWriter ignoredReportWriter;
 
     public UniplexFileProcessor(FileConfiguration fileConfiguration,
                                 UniplexClusterReader uniplexClusterReader,
                                 UniplexClusterWriter uniplexClusterWriter,
                                 UniProtMappingService uniProtMappingService) throws IOException {
 
-        this.fileConfiguration = fileConfiguration;
-        this.uniplexClusterReader = uniplexClusterReader;
-        this.uniplexClusterWriter = uniplexClusterWriter;
+        super(fileConfiguration, uniplexClusterReader, uniplexClusterWriter);
         this.uniProtMappingService = uniProtMappingService;
-        initialiseReportWriters();
     }
 
-    public void processFile() throws IOException {
-        // First delete the temp file if it exists
-        File tempOutputFile = fileConfiguration.outputPath().toFile();
-        if (tempOutputFile.exists()) {
-            log.info("Deleting file " + fileConfiguration.getOutputFileName() + "...");
-            tempOutputFile.delete();
-        }
-
-        log.info("Reading Uniplex file...");
-        File inputFile = new File(fileConfiguration.getInputFileName());
-        Collection<UniplexCluster> clusters = uniplexClusterReader.readClustersFromFile(inputFile);
-        log.info("Filtering out complexes with large number of components...");
-        Collection<UniplexCluster> clustersWithoutLargeOnes = filterOutLargeComplexes(clusters);
-        log.info("Cleaning all UniProt ACs...");
-        Collection<UniplexCluster> clustersWithCleanUniprotAcs = cleanUniprotACs(clustersWithoutLargeOnes);
-        log.info("Checking duplicates...");
-        Collection<UniplexCluster> clustersWithoutDuplicates = mergeDuplicateClusters(clustersWithCleanUniprotAcs);
-        log.info("Writing output file...");
-        uniplexClusterWriter.writeClustersToFile(clustersWithoutDuplicates);
-        // TODO: filter out low confidence clusters
-    }
-
-    private Collection<UniplexCluster> mergeDuplicateClusters(Collection<UniplexCluster> clusters) {
-        // We convert the list of clusters to a map, indexed by the sorted uniprot ACs of each cluster to
-        // remove duplicates.
-        return clusters.stream()
-                .collect(Collectors.toMap(
-                        uniplexCluster -> String.join(",", uniplexCluster.getUniprotAcs()),
-                        uniplexCluster -> uniplexCluster,
-                        this::mergeClusters))
-                .values();
-    }
-
-    private UniplexCluster mergeClusters(UniplexCluster clusterA, UniplexCluster clusterB) {
-        log.info("Duplicates cluster found: " +
-                String.join(",", clusterA.getClusterIds()) +
-                " and " +
-                String.join(",", clusterB.getClusterIds()));
-
-        List<String> clusterIds = Stream.concat(clusterA.getClusterIds().stream(), clusterB.getClusterIds().stream())
-                .distinct()
-                .collect(Collectors.toList());
-        Integer clusterConfidence = Integer.max(clusterA.getClusterConfidence(), clusterB.getClusterConfidence());
-
-        return new UniplexCluster(clusterIds, clusterConfidence, clusterA.getUniprotAcs());
-    }
-
-    private Collection<UniplexCluster> filterOutLargeComplexes(Collection<UniplexCluster> clusters) throws IOException {
-        List<UniplexCluster> filteredClusters = new ArrayList<>();
-        for (UniplexCluster cluster : clusters) {
-            int numberOfComponents = cluster.getUniprotAcs().size();
-            if (numberOfComponents > NUMBER_OF_COMPONENTS_LIMIT) {
-                ignoredReportWriter.write(
-                        cluster.getClusterIds(),
-                        cluster.getUniprotAcs(),
-                        new ArrayList<>(),
-                        List.of(String.format(COMPLEX_TOO_LARGE_ERROR, numberOfComponents)));
-            } else {
-                filteredClusters.add(cluster);
-            }
-        }
-        return filteredClusters;
-    }
-
-    private Collection<UniplexCluster> cleanUniprotACs(Collection<UniplexCluster> clusters) throws IOException {
-        Set<String> identifiers = clusters.stream()
-                .flatMap(c -> c.getUniprotAcs().stream())
+    @Override
+    protected Map<String, List<UniprotProtein>> mapToUniprotProteins(Collection<UniplexCluster> complexes) {
+        Set<String> identifiers = complexes.stream()
+                .flatMap(c -> c.getProteinIds().stream())
                 .collect(Collectors.toSet());
 
-        Map<String, List<String>> uniprotMapping = uniProtMappingService.mapIds(identifiers);
-
-        List<UniplexCluster> mappedClusters = new ArrayList<>();
-
-        for (UniplexCluster cluster : clusters) {
-            Collection<String> ids = cluster.getUniprotAcs();
-            List<String> mappedIds = new ArrayList<>();
-            Map<String, String> problems = new HashMap<>();
-            for (String id : ids) {
-                List<String> termMapping = uniprotMapping.get(id);
-                if (termMapping == null) {
-                    problems.put(id, String.format("%s has never existed", id));
-                } else if (termMapping.size() != 1) {
-                    if (termMapping.isEmpty()) {
-                        problems.put(id, String.format("%s has been deleted", id));
-                    } else {
-                        problems.put(id, String.format("%s has an ambiguous mapping to %s", id, String.join(" and ", termMapping)));
-                    }
-                } else {
-                    String mappedId = termMapping.get(0);
-                    mappedIds.add(mappedId);
-                }
-            }
-            if (problems.isEmpty()) {
-                cluster.setUniprotAcs(mappedIds);
-                mappedClusters.add(cluster);
-            } else {
-                ignoredReportWriter.write(cluster.getClusterIds(), cluster.getUniprotAcs(), problems.keySet(), problems.values());
-            }
-        }
-
-        return mappedClusters;
+        return uniProtMappingService.mapIds(identifiers);
     }
 
-    private void initialiseReportWriters() throws IOException {
-        File reportDirectory = new File(fileConfiguration.getReportDirectory());
-        if (!reportDirectory.exists()) {
-            reportDirectory.mkdirs();
-        }
-        if (!reportDirectory.isDirectory()) {
-            throw new IOException("The reports directory has to be a directory: " + fileConfiguration.getReportDirectory());
-        }
+    @Override
+    protected UniplexCluster mergeComplexes(UniplexCluster complexA, UniplexCluster complexB) {
+        log.info("Duplicates cluster found: " +
+                String.join(",", complexA.getComplexIds()) +
+                " and " +
+                String.join(",", complexB.getComplexIds()));
 
-        this.ignoredReportWriter = new FailedWriter(
-                new File(reportDirectory, "ignored" + fileConfiguration.getExtension()),
-                fileConfiguration.getSeparator(),
-                fileConfiguration.isHeader());
+        List<String> clusterIds = Stream.concat(complexA.getComplexIds().stream(), complexB.getComplexIds().stream())
+                .distinct()
+                .collect(Collectors.toList());
+        Integer clusterConfidence = Integer.max(complexA.getConfidence(), complexB.getConfidence());
+
+        return UniplexCluster.builder()
+                .complexIds(clusterIds)
+                .confidence(clusterConfidence)
+                .proteinIds(complexA.getProteinIds())
+                .build();
     }
 
     public static void main(String[] args) throws IOException {
@@ -180,8 +76,8 @@ public class UniplexFileProcessor {
 
         UniplexFileProcessor uniplexFileProcessor = new UniplexFileProcessor(
                 c,
-                new UniplexClusterReader(c),
-                new UniplexClusterWriter(c),
+                UniplexClusterReader.builder().fileConfiguration(c).build(),
+                UniplexClusterWriter.builder().fileConfiguration(c).build(),
                 new UniProtMappingService());
         uniplexFileProcessor.processFile();
     }

@@ -2,15 +2,12 @@ package uk.ac.ebi.complex.service.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.Collection;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.SuperBuilder;
 
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
-public class UniplexCluster {
-    private Collection<String> clusterIds;
-    private Integer clusterConfidence;
-    private Collection<String> uniprotAcs;
+@SuperBuilder
+@EqualsAndHashCode(callSuper = true)
+public class UniplexCluster extends ComplexToImport<Integer> {
 }
