@@ -19,9 +19,9 @@
 #      exit 1
 #fi
 
-INPUT_FILE=/Users/jmedina/Downloads/ProHD2_covariation/test_import/output_temp_8.csv
-OUTPUT_FILE_NAME=output_temp_2
-REPORT_DIR=/Users/jmedina/Downloads/ProHD2_covariation/test_import
+INPUT_FILE=/homes/mi/output_temp_8.csv
+OUTPUT_FILE_NAME=output_temp
+REPORT_DIR=/nfs/production/hhe/intact/data/protein-covariation-files
 SEPARATOR=,
 HEADER=true
 
