@@ -19,7 +19,7 @@
 #      exit 1
 #fi
 
-INPUT_FILE=/homes/mi/output_temp_8.csv
+INPUT_FILE=/nfs/production/hhe/intact/data/protein-covariation-files/output_temp.csv
 OUTPUT_FILE_NAME=output_temp
 REPORT_DIR=/nfs/production/hhe/intact/data/protein-covariation-files
 SEPARATOR=,

@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProteinCovariationBatchReader implements ItemReader<List<ProteinCovariation>>, ItemStream {
 
-    private static final int BATCH_SIZE = 250;
+    private static final int BATCH_SIZE = 50;
 
     private final FileConfiguration fileConfiguration;
 

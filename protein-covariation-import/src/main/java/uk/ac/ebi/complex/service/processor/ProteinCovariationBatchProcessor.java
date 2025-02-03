@@ -5,6 +5,7 @@ import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
+import psidev.psi.mi.jami.model.ModelledParticipant;
 import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.logging.ProteinFailedWriter;
 import uk.ac.ebi.complex.service.model.ProteinCovariation;
@@ -13,6 +14,7 @@ import uk.ac.ebi.complex.service.model.UniprotProtein;
 import uk.ac.ebi.complex.service.reader.ProteinIdsReader;
 import uk.ac.ebi.complex.service.service.UniProtMappingService;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
+import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.model.extension.IntactProtein;
 
 import java.io.File;
@@ -40,14 +42,11 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
     private Map<String, String> uniprotProteinMapping;
 
     private Set<String> proteinIdsNotInIntact;
-    private Set<String> proteinIdsInIntact;
+    private Map<String, String> proteinIdsInIntact;
 
     @Override
     public List<ProteinPairCovariation> process(List<ProteinCovariation> items) throws Exception {
-        List<ProteinPairCovariation> allProteinCovariationsPairs = new ArrayList<>();
-        for (ProteinCovariation proteinCovariation : items) {
-            allProteinCovariationsPairs.addAll(expandProteinCovariation(proteinCovariation));
-        }
+        List<ProteinPairCovariation> allProteinCovariationsPairs = expandProteinCovariations(items);
         if (!allProteinCovariationsPairs.isEmpty()) {
             return allProteinCovariationsPairs;
         }
@@ -69,7 +68,7 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
         super.open(executionContext);
 
         proteinIdsNotInIntact = new HashSet<>();
-        proteinIdsInIntact = new HashSet<>();
+        proteinIdsInIntact = new HashMap<>();
 
         System.out.println("Reading ids from file: " + fileConfiguration.getInputFileName());
 
@@ -105,51 +104,98 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
                 fileConfiguration.isHeader());
     }
 
-    protected List<ProteinPairCovariation> expandProteinCovariation(ProteinCovariation proteinCovariation) {
+    protected List<ProteinPairCovariation> expandProteinCovariations(List<ProteinCovariation> proteinCovariations) {
         Set<String> allProteinIds = new HashSet<>();
-        allProteinIds.addAll(proteinCovariation.getProteinA());
-        allProteinIds.addAll(proteinCovariation.getProteinB());
+        for (ProteinCovariation proteinCovariation : proteinCovariations) {
+            allProteinIds.addAll(proteinCovariation.getProteinA());
+            allProteinIds.addAll(proteinCovariation.getProteinB());
+        }
 
         Set<String> newProteinIdsToSearch = allProteinIds.stream()
                 .filter(id -> !proteinIdsNotInIntact.contains(id))
-                .filter(id -> !proteinIdsInIntact.contains(id))
+                .filter(id -> !proteinIdsInIntact.containsKey(id))
                 .collect(Collectors.toSet());
 
         if (!newProteinIdsToSearch.isEmpty()) {
             Collection<IntactProtein> proteins = this.intactDao.getProteinDao().getByCanonicalIds(Xref.UNIPROTKB_MI, newProteinIdsToSearch);
-            Set<String> proteinIdsInDatabase = proteins.stream()
-                    .map(IntactProtein::getPreferredIdentifier)
-                    .map(Xref::getId)
-                    .collect(Collectors.toSet());
+            proteins.forEach(protein ->
+                    proteinIdsInIntact.putIfAbsent(protein.getPreferredIdentifier().getId(), protein.getAc()));
 
-            proteinIdsInIntact.addAll(proteinIdsInDatabase);
             proteinIdsNotInIntact.addAll(newProteinIdsToSearch.stream()
-                    .filter(id -> !proteinIdsInDatabase.contains(id))
+                    .filter(id -> !proteinIdsInIntact.containsKey(id))
                     .collect(Collectors.toSet()));
         }
 
+        Set<String> proteinIntactAcs = allProteinIds.stream()
+                .filter(proteinIdsInIntact::containsKey)
+                .map(proteinIdsInIntact::get)
+                .collect(Collectors.toSet());
+        Collection<IntactComplex> complexes = getComplexesWithProteins(proteinIntactAcs);
+
         List<ProteinPairCovariation> pairs = new ArrayList<>();
 
-        for (String proteinA : proteinCovariation.getProteinA()) {
-            if (proteinIdsInIntact.contains(proteinA)) {
+        for (ProteinCovariation proteinCovariation : proteinCovariations) {
+            for (String proteinA : proteinCovariation.getProteinA()) {
                 for (String proteinB : proteinCovariation.getProteinB()) {
-                    if (proteinIdsInIntact.contains(proteinB)) {
-                        pairs.add(new ProteinPairCovariation(proteinA, proteinB, proteinCovariation.getProbability()));
-                        if (uniprotProteinMapping.containsKey(proteinA)) {
-                            pairs.add(new ProteinPairCovariation(uniprotProteinMapping.get(proteinA), proteinB, proteinCovariation.getProbability()));
-                            if (uniprotProteinMapping.containsKey(proteinB)) {
-                                pairs.add(new ProteinPairCovariation(uniprotProteinMapping.get(proteinA), uniprotProteinMapping.get(proteinB), proteinCovariation.getProbability()));
-                            }
-                        }
-                        if (uniprotProteinMapping.containsKey(proteinB)) {
-                            pairs.add(new ProteinPairCovariation(proteinA, uniprotProteinMapping.get(proteinB), proteinCovariation.getProbability()));
-                        }
-                    }
+                    addCovariationIfProteinsPartOfComplex(complexes, pairs, proteinA, proteinB, proteinCovariation.getProbability());
                 }
             }
         }
 
         return pairs;
+    }
+
+    private void addCovariationIfProteinsPartOfComplex(
+            Collection<IntactComplex> complexes,
+            List<ProteinPairCovariation> pairs,
+            String proteinA,
+            String proteinB,
+            Double probability) {
+
+        if (isProteinPairPartOfComplex(complexes, proteinA, proteinB)) {
+            pairs.add(new ProteinPairCovariation(proteinA, proteinB, probability));
+        }
+
+        if (uniprotProteinMapping.containsKey(proteinA)) {
+            String newProteinA = uniprotProteinMapping.get(proteinA);
+            if (isProteinPairPartOfComplex(complexes, newProteinA, proteinB)) {
+                pairs.add(new ProteinPairCovariation(newProteinA, proteinB, probability));
+            }
+
+            if (uniprotProteinMapping.containsKey(proteinB)) {
+                String newProteinB = uniprotProteinMapping.get(proteinB);
+                if (isProteinPairPartOfComplex(complexes, newProteinA, newProteinB)) {
+                    pairs.add(new ProteinPairCovariation(newProteinA, newProteinB, probability));
+                }
+            }
+        }
+        if (uniprotProteinMapping.containsKey(proteinB)) {
+            String newProteinB = uniprotProteinMapping.get(proteinB);
+            if (isProteinPairPartOfComplex(complexes, proteinA, newProteinB)) {
+                pairs.add(new ProteinPairCovariation(proteinA, newProteinB, probability));
+            }
+        }
+    }
+
+    private Collection<IntactComplex> getComplexesWithProteins(Set<String> proteins) {
+        return this.intactDao.getComplexDao()
+                .getComplexesInvolvingProteinsWithEbiAcs(proteins);
+    }
+
+    private boolean isProteinPairPartOfComplex(Collection<IntactComplex> complexes, String proteinA, String proteinB) {
+        if (proteinIdsInIntact.containsKey(proteinA)) {
+            if (proteinIdsInIntact.containsKey(proteinB)) {
+                for (IntactComplex intactComplex : complexes) {
+                    Collection<ModelledParticipant> participants  = intactComplex.getParticipants();
+                    if (participants.stream().anyMatch(p -> p.getInteractor().getPreferredIdentifier().getId().equals(proteinA))) {
+                        if (participants.stream().anyMatch(p -> p.getInteractor().getPreferredIdentifier().getId().equals(proteinB))) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private Map<String, String> mapToUniprotProteins(Collection<List<String>> proteinIds) throws IOException {

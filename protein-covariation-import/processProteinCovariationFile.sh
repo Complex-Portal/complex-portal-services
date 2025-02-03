@@ -1,5 +1,16 @@
 #!/bin/bash
 
+#SBATCH --time=2-00:00:00   # walltime
+#SBATCH --ntasks=1   # number of tasks
+#SBATCH --cpus-per-task=5   # number of CPUs Per Task i.e if your code is multi-threaded
+#SBATCH --nodes=1   # number of nodes
+#SBATCH -p production   # partition(s)
+#SBATCH --mem=8G   # memory per node
+#SBATCH -J "PROCESS_COVARIATION_FILE"   # job name
+#SBATCH -o "/nfs/production/hhe/intact/data/protein-covariation-import-logs/process-protein-covariations-file-%j.out"   # job output file
+#SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
+#SBATCH --mail-type=ALL
+
 #if [ $# -ne 5 ]; then
 #      echo ""
 #      echo "ERROR: wrong number of parameters ($#)."
@@ -8,9 +19,9 @@
 #      exit 1
 #fi
 
-INPUT_FILE=/Users/jmedina/Downloads/ProHD2_covariation/out/datasets/RF_predictions.csv
-OUTPUT_FILE_NAME=output_temp_1
-REPORT_DIR=/Users/jmedina/Downloads/ProHD2_covariation/test_import
+INPUT_FILE=/homes/mi/RF_predictions.csv
+OUTPUT_FILE_NAME=output_temp
+REPORT_DIR=/nfs/production/hhe/intact/data/protein-covariation-files
 SEPARATOR=,
 HEADER=true
 
