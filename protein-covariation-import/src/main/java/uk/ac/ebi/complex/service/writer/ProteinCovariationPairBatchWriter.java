@@ -24,21 +24,31 @@ public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<
     public void write(List<? extends List<ProteinPairCovariation>> items) throws Exception {
         List<IntactProteinPairCovariation> existingProteinPairCovariations = getProteinCovariations(items);
 
-        List<IntactProteinPairCovariation> covariationsToSave = new ArrayList<>();
+        List<IntactProteinPairCovariation> newCovariationsToSave = new ArrayList<>();
+        List<IntactProteinPairCovariation> covariationsToUpdate = new ArrayList<>();
+
         for (List<ProteinPairCovariation> proteinCovariations : items) {
             for (ProteinPairCovariation proteinCovariation : proteinCovariations) {
                 IntactProteinPairCovariation intactProteinPairCovariation = getProteinCovariationIfExists(
                         existingProteinPairCovariations, proteinCovariation);
                 if (intactProteinPairCovariation == null) {
-                    covariationsToSave.add(new IntactProteinPairCovariation(
+                    newCovariationsToSave.add(new IntactProteinPairCovariation(
                             proteinCovariation.getProteinA(), proteinCovariation.getProteinB(), proteinCovariation.getProbability()));
                 } else if (!intactProteinPairCovariation.getProbability().equals(proteinCovariation.getProbability())) {
                     intactProteinPairCovariation.setProbability(proteinCovariation.getProbability());
-                    covariationsToSave.add(intactProteinPairCovariation);
+                    covariationsToUpdate.add(intactProteinPairCovariation);
                 }
             }
         }
-        this.intactService.saveOrUpdate(covariationsToSave);
+
+        if (!covariationsToUpdate.isEmpty()) {
+            this.intactService.saveOrUpdate(covariationsToUpdate);
+        }
+        if (!newCovariationsToSave.isEmpty()) {
+            newCovariationsToSave.forEach(intactProteinPairCovariation ->
+                    this.intactDao.getEntityManager().persist(intactProteinPairCovariation));
+            this.intactDao.getEntityManager().flush();
+        }
     }
 
     private List<IntactProteinPairCovariation> getProteinCovariations(List<? extends List<ProteinPairCovariation>> proteinCovariations) {

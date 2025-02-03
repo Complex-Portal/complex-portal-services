@@ -22,7 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProteinCovariationPairBatchReader implements ItemReader<List<ProteinPairCovariation>>, ItemStream {
 
-    private static final int BATCH_SIZE = 10;
+    private static final int BATCH_SIZE = 25;
 
     private final FileConfiguration fileConfiguration;
 
