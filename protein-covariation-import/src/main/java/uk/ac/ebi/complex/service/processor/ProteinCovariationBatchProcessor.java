@@ -4,6 +4,8 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Interactor;
@@ -54,7 +56,7 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
 //    private Set<String> proteinIdsNotInIntact;
 //    private Map<String, String> proteinIdsInIntact;
     
-    private Set<String> proteinInIntact;
+    private Set<String> proteinsInIntact;
     private Map<String, Set<String>> complexesInIntact;
 
     @Override
@@ -77,6 +79,7 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
     }
 
     @Override
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRED, value = "jamiTransactionManager")
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         super.open(executionContext);
 
@@ -87,7 +90,7 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
 
         long count = 0;
         complexesInIntact = new HashMap<>();
-        proteinInIntact = new HashSet<>();
+        proteinsInIntact = new HashSet<>();
 
 //        Query query = intactDao.getEntityManager().createQuery(
 //                "select c, i " +
@@ -109,12 +112,12 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
 //                        !intactInteractor.getPreferredIdentifier().getId().isEmpty()) {
 //                    String proteinId = intactInteractor.getPreferredIdentifier().getId();
 //                    complexesInIntact.get(intactComplex.getComplexAc()).add(proteinId);
-//                    proteinInIntact.add(proteinId);
+//                    proteinsInIntact.add(proteinId);
 //                }
 //            }
 //        }
 
-        Iterator<Complex> complexIterator = complexService.iterateAll(true);
+        Iterator<Complex> complexIterator = complexService.iterateAll();
         while (complexIterator.hasNext()) {
             count++;
             if (count % 500 == 0) {
@@ -133,8 +136,8 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
                     }
                 }
             }
-            complexesInIntact.put(complex.getPreferredIdentifier().getId(), participantIds);
-            proteinInIntact.addAll(participantIds);
+            complexesInIntact.putIfAbsent(complex.getPreferredIdentifier().getId(), participantIds);
+            proteinsInIntact.addAll(participantIds);
         }
 
         log.info("Reading all complexes and proteins - DONE");
@@ -219,8 +222,8 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
     }
 
     private boolean isProteinPairPartOfComplexV2(String proteinA, String proteinB) {
-        if (proteinInIntact.contains(proteinA)) {
-            if (proteinInIntact.contains(proteinB)) {
+        if (proteinsInIntact.contains(proteinA)) {
+            if (proteinsInIntact.contains(proteinB)) {
                 for (String complexId : complexesInIntact.keySet()) {
                     Set<String> participants = complexesInIntact.get(complexId);
                     if (participants.stream().anyMatch(p -> p.equals(proteinA))) {
