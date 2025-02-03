@@ -4,6 +4,7 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
 
 import java.io.BufferedReader;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Log4j
 @RequiredArgsConstructor
 public class ProteinIdsReader {
 
@@ -37,7 +39,7 @@ public class ProteinIdsReader {
             proteinIdsFromStringArray(proteinIds, csvLine);
             count++;
             if (count % 2_500_000 == 0) {
-                System.out.println("Read " + count + " proteinIds");
+                log.info("Read " + count + " proteinIds");
             }
         }
         csvReader.close();

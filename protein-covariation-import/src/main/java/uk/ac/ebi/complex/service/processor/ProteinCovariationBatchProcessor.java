@@ -19,10 +19,12 @@ import uk.ac.ebi.complex.service.reader.ProteinIdsReader;
 import uk.ac.ebi.complex.service.service.UniProtMappingService;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
+import uk.ac.ebi.intact.jami.model.extension.IntactInteractor;
 import uk.ac.ebi.intact.jami.model.extension.IntactProtein;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 import uk.ac.ebi.intact.jami.service.InteractorService;
 
+import javax.persistence.Query;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -81,24 +83,45 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
 //        proteinIdsNotInIntact = new HashSet<>();
 //        proteinIdsInIntact = new HashMap<>();
 
-        System.out.println("Reading all complexes and proteins");
+        log.info("Reading all complexes and proteins");
 
         long count = 0;
         complexesInIntact = new HashMap<>();
         proteinInIntact = new HashSet<>();
 
+//        Query query = intactDao.getEntityManager().createQuery(
+//                "select c, i " +
+//                        "from IntactComplex c " +
+//                        "join c.participants p " +
+//                        "join p.interactor i");
+//        List<Object[]> results = query.getResultList();
+//        for (Object[] result : results) {
+//            count++;
+//            if (count % 500 == 0) {
+//                log.info("Processed " + count + " complexes");
+//            }
+//            IntactComplex intactComplex = (IntactComplex) result[0];
+//            IntactInteractor intactInteractor = (IntactInteractor) result[1];
+//            complexesInIntact.putIfAbsent(intactComplex.getComplexAc(), new HashSet<>());
+//            if (intactInteractor instanceof IntactProtein) {
+//                if (intactInteractor.getPreferredIdentifier() != null &&
+//                        intactInteractor.getPreferredIdentifier().getId() != null &&
+//                        !intactInteractor.getPreferredIdentifier().getId().isEmpty()) {
+//                    String proteinId = intactInteractor.getPreferredIdentifier().getId();
+//                    complexesInIntact.get(intactComplex.getComplexAc()).add(proteinId);
+//                    proteinInIntact.add(proteinId);
+//                }
+//            }
+//        }
+
         Iterator<Complex> complexIterator = complexService.iterateAll(true);
         while (complexIterator.hasNext()) {
             count++;
             if (count % 500 == 0) {
-                System.out.println("Processed " + count + " complexes");
+                log.info("Processed " + count + " complexes");
             }
             Complex complex = complexIterator.next();
             Set<String> participantIds = new HashSet<>();
-//            IntactComplex intactComplex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complex.getComplexAc());
-//            for (ModelledComparableParticipant participant: complex.getComparableParticipants()) {
-//                participantIds.add(participant.getInteractorId());
-//            }
             for (Participant participant : complex.getParticipants()) {
                 if (participant.getInteractor() != null) {
                     Interactor interactor = participant.getInteractor();
@@ -114,16 +137,16 @@ public class ProteinCovariationBatchProcessor extends AbstractBatchProcessor<Lis
             proteinInIntact.addAll(participantIds);
         }
 
-        System.out.println("Reading all complexes and proteins - DONE");
+        log.info("Reading all complexes and proteins - DONE");
 
-        System.out.println("Reading protein ids from file: " + fileConfiguration.getInputFileName());
+        log.info("Reading protein ids from file: " + fileConfiguration.getInputFileName());
 
         try {
             Collection<List<String>> proteinIds = proteinIdsReader.readProteinIdsFromFile();
-            System.out.println("Read ids from file: " + proteinIds.size());
-            System.out.println("Mapping to Uniprot");
+            log.info("Read ids from file: " + proteinIds.size());
+            log.info("Mapping to Uniprot");
             uniprotProteinMapping = mapToUniprotProteins(proteinIds);
-            System.out.println("Map to Uniprot completed");
+            log.info("Map to Uniprot completed");
         } catch (IOException e) {
             throw new ItemStreamException(e);
         }
