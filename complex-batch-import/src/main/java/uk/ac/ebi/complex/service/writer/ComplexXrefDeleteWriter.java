@@ -4,6 +4,7 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
+import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.logging.DeleteReportWriter;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
@@ -17,7 +18,7 @@ import java.util.List;
 
 @Log4j
 @SuperBuilder
-public class ComplexXrefDeleteWriter extends AbstractBatchWriter<ComplexWithXrefsToDelete> {
+public class ComplexXrefDeleteWriter extends AbstractBatchWriter<ComplexWithXrefsToDelete, Complex> {
 
     private DeleteReportWriter xrefsToDeleteReportWriter;
     private ErrorsReportWriter errorReportWriter;
@@ -95,7 +96,7 @@ public class ComplexXrefDeleteWriter extends AbstractBatchWriter<ComplexWithXref
         }
 
         if (!appProperties.isDryRunMode()) {
-            complexService.saveOrUpdate(complexesUpdated);
+            intactService.saveOrUpdate(complexesUpdated);
         }
     }
 

@@ -9,7 +9,7 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.Assert;
 import uk.ac.ebi.complex.service.config.AppProperties;
 import uk.ac.ebi.complex.service.config.FileConfiguration;
-import uk.ac.ebi.intact.jami.service.ComplexService;
+import uk.ac.ebi.intact.jami.service.IntactService;
 import uk.ac.ebi.intact.jami.synchronizer.listener.impl.DbSynchronizerStatisticsReporter;
 
 import java.io.File;
@@ -18,7 +18,7 @@ import java.util.Map;
 
 @Log4j
 @SuperBuilder
-public abstract class AbstractBatchWriter<T> implements ItemWriter<T>, ItemStream {
+public abstract class AbstractBatchWriter<T, R> implements ItemWriter<T>, ItemStream {
 
     public final static String PERSIST_MAP_COUNT = "persisted.map";
     public final static String MERGE_MAP_COUNT = "merged.map";
@@ -29,7 +29,7 @@ public abstract class AbstractBatchWriter<T> implements ItemWriter<T>, ItemStrea
     private DbSynchronizerStatisticsReporter synchronizerListener;
 
     protected final FileConfiguration fileConfiguration;
-    protected final ComplexService complexService;
+    protected final IntactService<R> intactService;
     protected final AppProperties appProperties;
 
     @Override
@@ -89,7 +89,7 @@ public abstract class AbstractBatchWriter<T> implements ItemWriter<T>, ItemStrea
             }
         }
 
-        complexService.getIntactDao().getSynchronizerContext().initialiseDbSynchronizerListener(synchronizerListener);
+        intactService.getIntactDao().getSynchronizerContext().initialiseDbSynchronizerListener(synchronizerListener);
     }
 
     @Override

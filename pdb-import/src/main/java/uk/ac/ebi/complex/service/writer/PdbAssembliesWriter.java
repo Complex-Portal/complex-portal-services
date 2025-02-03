@@ -4,6 +4,7 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
+import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.exception.CvTermNotFoundException;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
@@ -23,7 +24,7 @@ import java.util.Map;
 
 @Log4j
 @SuperBuilder
-public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssemblyXrefs> {
+public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssemblyXrefs, Complex> {
 
     private static final String WWPDB_DB_MI = "MI:0805";
 
@@ -82,7 +83,7 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
         }
 
         if (!appProperties.isDryRunMode()) {
-            this.complexService.saveOrUpdate(complexesToSave.values());
+            this.intactService.saveOrUpdate(complexesToSave.values());
         }
     }
 

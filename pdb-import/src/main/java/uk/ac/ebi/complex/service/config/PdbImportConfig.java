@@ -66,7 +66,7 @@ public class PdbImportConfig {
                 .intactDao(intactDao)
                 .appProperties(appProperties)
                 .fileConfiguration(fileConfiguration)
-                .complexService(complexService)
+                .intactService(complexService)
                 .build();
 
     }

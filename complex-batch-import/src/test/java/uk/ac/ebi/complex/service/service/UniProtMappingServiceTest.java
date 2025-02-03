@@ -142,4 +142,21 @@ public class UniProtMappingServiceTest {
             assertEquals(genesToMap.get(gene), proteins.get(0).getProteinAc());
         });
     }
+
+    @Test
+    public void testMapIdentifiers() {
+        Map<String, String> idsToMap = ImmutableMap.<String, String>builder()
+                .put("O75663", "O75663")
+                .put("O75663-2", "O75663")
+                .put("O75150", "O75150")
+                .put("O75150-3", "O75150")
+                .put("O75150-4", "O75150")
+                .build();
+
+        Map<String, List<UniprotProtein>> mapping = uniProtMappingService.mapIds(idsToMap.keySet());
+        mapping.forEach((id, proteins) -> {
+            assertEquals(1, proteins.size());
+            assertEquals(idsToMap.get(id), proteins.get(0).getProteinAc());
+        });
+    }
 }

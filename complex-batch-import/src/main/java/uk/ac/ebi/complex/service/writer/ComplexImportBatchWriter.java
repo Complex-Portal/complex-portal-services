@@ -4,6 +4,7 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
+import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.logging.WriteReportWriter;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 
 @Log4j
 @SuperBuilder
-public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends AbstractBatchWriter<ComplexWithMatches<T, R>> {
+public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends AbstractBatchWriter<ComplexWithMatches<T, R>, Complex> {
 
     private final ComplexManager<T, R> complexManager;
 
@@ -114,7 +115,9 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                         if (appProperties.isDryRunMode()) {
                             logComplexesToUpdate(complexToImport, List.of(existingComplex), ComplexManager.SUBSET_QUALIFIER);
                         } else {
-                            updatedSubsetComplexes.add(complexManager.addSubsetXrefs(complexToImport, existingComplex));
+                            updatedSubsetComplexes.put(
+                                    complexToImport.getComplexIds().iterator().next(),
+                                    complexManager.addSubsetXrefs(complexToImport, existingComplex));
                         }
                     } else {
                         logUnchangedComplexes(complexToImport, List.of(existingComplex), ComplexManager.SUBSET_QUALIFIER);
@@ -129,7 +132,9 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                         if (complexManager.doesComplexNeedComplexClusterXref(complexToImport, existingComplex)) {
                             complexToUpdateFound = true;
                             if (!appProperties.isDryRunMode()) {
-                                updatedComplexClusterComplexes.add(complexManager.addComplexClusterXrefs(complexToImport, existingComplex));
+                                updatedComplexClusterComplexes.put(
+                                        complexToImport.getComplexIds().iterator().next(),
+                                        complexManager.addComplexClusterXrefs(complexToImport, existingComplex));
                             }
                         }
                     }
@@ -149,10 +154,10 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         }
 
         if (!appProperties.isDryRunMode()) {
-            this.complexService.saveOrUpdate(newComplexes.values());
-            this.complexService.saveOrUpdate(updatedIdentityComplexes.values());
-            this.complexService.saveOrUpdate(updatedSubsetComplexes.values());
-            this.complexService.saveOrUpdate(updatedComplexClusterComplexes.values());
+            this.intactService.saveOrUpdate(newComplexes.values());
+            this.intactService.saveOrUpdate(updatedIdentityComplexes.values());
+            this.intactService.saveOrUpdate(updatedSubsetComplexes.values());
+            this.intactService.saveOrUpdate(updatedComplexClusterComplexes.values());
 
             for (ComplexWithMatches<T, R> complexWithMatches : items) {
                 R complexToImport = complexWithMatches.getComplexToImport();

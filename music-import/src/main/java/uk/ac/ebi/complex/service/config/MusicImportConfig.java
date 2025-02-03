@@ -118,7 +118,7 @@ public class MusicImportConfig {
 
         return ComplexImportBatchWriter.<Double, MusicComplexToImport>builder()
                 .complexManager(musicComplexManager)
-                .complexService(complexService)
+                .intactService(complexService)
                 .fileConfiguration(fileConfiguration)
                 .appProperties(appProperties)
                 .build();

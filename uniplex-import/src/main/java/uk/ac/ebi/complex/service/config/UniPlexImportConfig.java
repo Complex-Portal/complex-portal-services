@@ -108,7 +108,7 @@ public class UniPlexImportConfig {
 
         return ComplexImportBatchWriter.<Integer, UniplexCluster>builder()
                 .complexManager(uniplexComplexManager)
-                .complexService(complexService)
+                .intactService(complexService)
                 .fileConfiguration(fileConfiguration)
                 .appProperties(appProperties)
                 .build();
@@ -167,7 +167,7 @@ public class UniPlexImportConfig {
             FileConfiguration fileConfiguration) {
 
         return ComplexXrefDeleteWriter.builder()
-                .complexService(complexService)
+                .intactService(complexService)
                 .fileConfiguration(fileConfiguration)
                 .build();
     }

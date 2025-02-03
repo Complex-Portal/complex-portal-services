@@ -38,7 +38,8 @@ public class UniProt {
                 public enum Status {
                     RUNNING,
                     FINISHED,
-                    QUEUED
+                    QUEUED,
+                    NEW
                 }
             }
         }
