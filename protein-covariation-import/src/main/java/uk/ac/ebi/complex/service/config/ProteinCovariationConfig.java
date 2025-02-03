@@ -26,6 +26,7 @@ import uk.ac.ebi.complex.service.service.UniProtMappingService;
 import uk.ac.ebi.complex.service.writer.ProteinCovariationBatchWriter;
 import uk.ac.ebi.complex.service.writer.ProteinCovariationPairBatchWriter;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
+import uk.ac.ebi.intact.jami.service.ComplexService;
 import uk.ac.ebi.intact.jami.service.ProteinPairCovariationService;
 
 import java.util.List;
@@ -55,13 +56,15 @@ public class ProteinCovariationConfig {
     public ProteinCovariationBatchProcessor proteinCovariationBatchProcessor(
             FileConfiguration fileConfiguration,
             IntactDao intactDao,
-            UniProtMappingService uniProtMappingService) {
+            UniProtMappingService uniProtMappingService,
+            ComplexService complexService) {
 
         return ProteinCovariationBatchProcessor.builder()
                 .fileConfiguration(fileConfiguration)
                 .intactDao(intactDao)
                 .uniProtMappingService(uniProtMappingService)
                 .proteinIdsReader(new ProteinIdsReader(fileConfiguration))
+                .complexService(complexService)
                 .build();
     }
 
