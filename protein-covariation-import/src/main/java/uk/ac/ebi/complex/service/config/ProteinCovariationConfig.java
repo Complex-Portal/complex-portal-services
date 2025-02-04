@@ -18,6 +18,7 @@ import psidev.psi.mi.jami.batch.BasicChunkLoggerListener;
 import psidev.psi.mi.jami.batch.SimpleJobListener;
 import uk.ac.ebi.complex.service.model.ProteinCovariation;
 import uk.ac.ebi.complex.service.model.ProteinPairCovariation;
+import uk.ac.ebi.complex.service.partitioner.ProteinCovariationPartitioner;
 import uk.ac.ebi.complex.service.processor.ProteinCovariationBatchProcessor;
 import uk.ac.ebi.complex.service.processor.ProteinCovariationPartitionProcessor;
 import uk.ac.ebi.complex.service.processor.ProteinCovariationPreProcessTasklet;
@@ -169,11 +170,13 @@ public class ProteinCovariationConfig {
     public Step processProteinCovariationFilePartitionStep(
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
+            ProteinCovariationPartitioner proteinCovariationPartitioner,
             @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
 
         return new StepBuilder("processProteinCovariationFilePartitionStep")
                 .repository(basicBatchJobRepository.getObject())
-                .partitioner(processProteinCovariationFileStep)
+                .partitioner("processProteinCovariationFileStep", proteinCovariationPartitioner)
+                .step(processProteinCovariationFileStep)
                 .gridSize(1_000_000)
                 .listener(basicChunkLoggerListener)
                 .build();
