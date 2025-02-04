@@ -173,8 +173,8 @@ public class ProteinCovariationConfig {
     @Bean
     public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
-        threadPoolTaskExecutor.setCorePoolSize(10);
-        threadPoolTaskExecutor.setMaxPoolSize(10);
+        threadPoolTaskExecutor.setCorePoolSize(25);
+        threadPoolTaskExecutor.setMaxPoolSize(25);
         return threadPoolTaskExecutor;
     }
 
@@ -188,7 +188,7 @@ public class ProteinCovariationConfig {
 
         TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
         partitionHandler.setStep(processProteinCovariationFileStep);
-        partitionHandler.setGridSize(1_000);
+        partitionHandler.setGridSize(25);
         partitionHandler.setTaskExecutor(threadPoolTaskExecutor);
 
         return new StepBuilder("processProteinCovariationFilePartitionStep")
