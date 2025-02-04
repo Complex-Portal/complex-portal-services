@@ -2,6 +2,7 @@ package uk.ac.ebi.complex.service.partitioner;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.partition.support.Partitioner;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 @Log4j
 @Component
+@StepScope
 @RequiredArgsConstructor
 public class ProteinCovariationPartitioner implements Partitioner {
 
