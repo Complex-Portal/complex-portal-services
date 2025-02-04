@@ -29,8 +29,8 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
     private CSVReader csvReader;
     private Iterator<String[]> csvIterator;
 
-    int partitionSize;
-    int linesRead;
+    private int partitionSize;
+    private int linesRead;
 
     @Override
     public ProteinCovariation read() {
@@ -53,9 +53,8 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
 
         log.info("Reading covariations from partition " + partitionIndex + ", from line " + startLine);
 
-        BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new FileReader(fileConfiguration.getInputFileName()));
+            BufferedReader reader = new BufferedReader(new FileReader(fileConfiguration.getInputFileName()));
             csvReader = new CSVReaderBuilder(reader)
                     .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
                     .build();
@@ -65,7 +64,12 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
                     csvReader.skip(1);
                 }
             } else {
-                csvReader.skip(startLine);
+                try {
+                    csvReader.skip(startLine);
+                } catch (IOException e) {
+                    log.error(e);
+                    log.error("partitionIndex = " + partitionIndex + ", startLine = " + startLine + ", partitionSize = " + partitionSize);
+                }
             }
 
             csvIterator = csvReader.iterator();

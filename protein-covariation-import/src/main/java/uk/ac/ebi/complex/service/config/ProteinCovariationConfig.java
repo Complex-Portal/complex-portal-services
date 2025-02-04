@@ -14,6 +14,7 @@ import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -135,10 +136,16 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
+    public SyncTaskExecutor syncExecutor() {
+        return new SyncTaskExecutor();
+    }
+
+    @Bean
     public Step processProteinCovariationFileStep(
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
+            SyncTaskExecutor syncExecutor,
             ProteinCovariationPartitionReader proteinCovariationPartitionReader,
             ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor,
             ProteinCovariationPartitionWriter proteinCovariationPartitionWriter) throws Exception {
@@ -157,13 +164,14 @@ public class ProteinCovariationConfig {
                 .retryLimit(10)
                 .retry(org.springframework.batch.item.ItemStreamException.class)
                 .retry(javax.net.ssl.SSLHandshakeException.class)
+                .taskExecutor(syncExecutor)
                 .listener((StepExecutionListener) basicChunkLoggerListener)
                 .listener((ChunkListener) basicChunkLoggerListener)
                 .build();
     }
 
     @Bean
-    public TaskExecutor threadPoolTaskExecutor() {
+    public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
         threadPoolTaskExecutor.setCorePoolSize(10);
         threadPoolTaskExecutor.setMaxPoolSize(10);
@@ -175,7 +183,7 @@ public class ProteinCovariationConfig {
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
             ProteinCovariationPartitioner proteinCovariationPartitioner,
-            TaskExecutor threadPoolTaskExecutor,
+            ThreadPoolTaskExecutor threadPoolTaskExecutor,
             @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
 
         TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();

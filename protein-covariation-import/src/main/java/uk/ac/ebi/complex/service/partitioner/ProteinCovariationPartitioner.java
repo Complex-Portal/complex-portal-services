@@ -48,7 +48,7 @@ public class ProteinCovariationPartitioner implements Partitioner {
             startLine = startLine + partitionSize;
         }
 
-        log.info("Created Partitions of size: " + partitionMap.size());
+        log.info("Number of partitions created: " + partitionMap.size());
         return partitionMap;
     }
 }
