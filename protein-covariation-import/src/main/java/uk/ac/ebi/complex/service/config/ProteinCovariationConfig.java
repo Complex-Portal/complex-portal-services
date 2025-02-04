@@ -14,6 +14,8 @@ import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import psidev.psi.mi.jami.batch.BasicChunkLoggerListener;
 import psidev.psi.mi.jami.batch.SimpleJobListener;
@@ -140,10 +142,16 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
+    public TaskExecutor asyncTaskExecutor() {
+        return new SimpleAsyncTaskExecutor();
+    }
+
+    @Bean
     public Step processProteinCovariationFileStep(
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
+            TaskExecutor asyncTaskExecutor,
             ProteinCovariationPartitionReader proteinCovariationPartitionReader,
             ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor,
             ProteinCovariationPartitionWriter proteinCovariationPartitionWriter) throws Exception {
@@ -162,6 +170,7 @@ public class ProteinCovariationConfig {
                 .retryLimit(10)
                 .retry(org.springframework.batch.item.ItemStreamException.class)
                 .retry(javax.net.ssl.SSLHandshakeException.class)
+                .taskExecutor(asyncTaskExecutor)
                 .listener((StepExecutionListener) basicChunkLoggerListener)
                 .listener((ChunkListener) basicChunkLoggerListener)
                 .build();
@@ -172,16 +181,18 @@ public class ProteinCovariationConfig {
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
             ProteinCovariationPartitioner proteinCovariationPartitioner,
+            TaskExecutor asyncTaskExecutor,
             @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
 
         TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
         partitionHandler.setStep(processProteinCovariationFileStep);
-        partitionHandler.setGridSize(1_000_000);
+        partitionHandler.setGridSize(10_000);
 
         return new StepBuilder("processProteinCovariationFilePartitionStep")
                 .repository(basicBatchJobRepository.getObject())
                 .partitioner("processProteinCovariationFileStep", proteinCovariationPartitioner)
                 .partitionHandler(partitionHandler)
+                .taskExecutor(asyncTaskExecutor)
                 .listener(basicChunkLoggerListener)
                 .listener((ChunkListener) basicChunkLoggerListener)
                 .build();
@@ -201,7 +212,7 @@ public class ProteinCovariationConfig {
                 basicBatchJobRepository);
 
         return new SimpleStepBuilder<List<ProteinPairCovariation>, List<ProteinPairCovariation>>(basicStep)
-                .chunk(50)
+                .chunk(250)
                 .reader(proteinCovariationPairBatchReader)
                 .writer(proteinCovariationPairBatchWriter)
                 .faultTolerant()
