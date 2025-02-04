@@ -70,8 +70,10 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
     @Override
     public void close() throws ItemStreamException {
         try {
+            log.info("Closing csvWriter for partition: " + partitionIndex);
             csvWriter.close();
         } catch (IOException e) {
+            log.error("Error when closing csvWriter for partition: " + partitionIndex);
             throw new ItemStreamException(e);
         }
     }

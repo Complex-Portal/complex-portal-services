@@ -189,6 +189,7 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
                         } else {
                             log.error("proteinB = NULL");
                         }
+                        log.error("complexId = " + complexId);
                         if (participants != null) {
                             log.error("participants.size = " + participants.size());
                             participants.forEach(participant -> {
