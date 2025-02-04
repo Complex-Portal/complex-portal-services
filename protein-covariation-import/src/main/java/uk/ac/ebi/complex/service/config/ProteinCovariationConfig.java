@@ -181,12 +181,12 @@ public class ProteinCovariationConfig {
         TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
         partitionHandler.setStep(processProteinCovariationFileStep);
         partitionHandler.setGridSize(1_000);
+        partitionHandler.setTaskExecutor(threadPoolTaskExecutor);
 
         return new StepBuilder("processProteinCovariationFilePartitionStep")
                 .repository(basicBatchJobRepository.getObject())
                 .partitioner("processProteinCovariationFileStep", proteinCovariationPartitioner)
                 .partitionHandler(partitionHandler)
-                .taskExecutor(threadPoolTaskExecutor)
                 .listener(basicChunkLoggerListener)
                 .listener((ChunkListener) basicChunkLoggerListener)
                 .build();
