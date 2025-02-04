@@ -212,14 +212,14 @@ public class ProteinCovariationConfig {
     public Job processProteinCovariationFileJob(
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
-            @Qualifier("preProcessCovariationFile") Step preProcessCovariationFile,
+//            @Qualifier("preProcessCovariationFile") Step preProcessCovariationFile,
             @Qualifier("processProteinCovariationFilePartitionStep") Step processProteinCovariationFilePartitionStep) throws Exception {
 
         return new JobBuilder("processProteinCovariationFileJob")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
-                .start(preProcessCovariationFile)
-                .next(processProteinCovariationFilePartitionStep)
+//                .start(preProcessCovariationFile)
+                .start(processProteinCovariationFilePartitionStep)
                 .build();
     }
 
