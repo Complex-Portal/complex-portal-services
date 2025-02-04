@@ -36,7 +36,7 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
             throw new ItemStreamException("Report file writer could not be opened", e);
         }
 
-        File outputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getReportDirectory()).toFile();
+        File outputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getOutputFileName()).toFile();
         if (!outputDirectory.exists()) {
             outputDirectory.mkdirs();
         }
