@@ -145,16 +145,16 @@ public class ProteinCovariationConfig {
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
             TaskExecutor asyncTaskExecutor,
-            ProteinCovariationPartitionReader proteinCovariationPartitionReader,
-            ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor,
-            ProteinCovariationPartitionWriter proteinCovariationPartitionWriter) throws Exception {
+            ProteinCovariationBatchReader proteinCovariationPartitionReader,
+            ProteinCovariationBatchProcessor proteinCovariationPartitionProcessor,
+            ProteinCovariationBatchWriter proteinCovariationPartitionWriter) throws Exception {
 
         StepBuilder basicStep = basicStepBuilder(
                 "processProteinCovariationFileStep",
                 jamiTransactionManager,
                 basicBatchJobRepository);
 
-        return new SimpleStepBuilder<ProteinCovariation, List<ProteinPairCovariation>>(basicStep)
+        return new SimpleStepBuilder<List<ProteinCovariation>, List<ProteinPairCovariation>>(basicStep)
                 .chunk(100)
                 .reader(proteinCovariationPartitionReader)
                 .processor(proteinCovariationPartitionProcessor)
