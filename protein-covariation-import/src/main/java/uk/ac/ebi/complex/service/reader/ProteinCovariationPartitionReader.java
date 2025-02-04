@@ -3,6 +3,7 @@ package uk.ac.ebi.complex.service.reader;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
@@ -21,15 +22,18 @@ import java.util.Iterator;
 import java.util.stream.Collectors;
 
 @Log4j
+@Builder
 @RequiredArgsConstructor
 public class ProteinCovariationPartitionReader implements ItemReader<ProteinCovariation>, ItemStream {
 
+    private final int partitionSize;
+    private final int partitionIndex;
+    private final int startLine;
     private final FileConfiguration fileConfiguration;
 
     private CSVReader csvReader;
     private Iterator<String[]> csvIterator;
 
-    private int partitionSize;
     private int linesRead;
 
     @Override
@@ -46,12 +50,9 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
 
-        int partitionIndex = executionContext.getInt("partitionIndex");
-        int startLine = executionContext.getInt("startLine");
-        partitionSize = executionContext.getInt("partitionSize");
         linesRead = 0;
 
-        log.info("Reading covariations from partition " + partitionIndex + ", from line " + startLine);
+        log.info("Reading " + partitionSize + " covariations from partition " + partitionIndex + ", from line " + startLine);
 
         try {
             BufferedReader reader = new BufferedReader(new FileReader(fileConfiguration.getInputFileName()));
@@ -64,12 +65,7 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
                     csvReader.skip(1);
                 }
             } else {
-                try {
-                    csvReader.skip(startLine);
-                } catch (Exception e) {
-                    log.error(e);
-                    log.error("partitionIndex = " + partitionIndex + ", startLine = " + startLine + ", partitionSize = " + partitionSize);
-                }
+                csvReader.skip(startLine);
             }
 
             csvIterator = csvReader.iterator();

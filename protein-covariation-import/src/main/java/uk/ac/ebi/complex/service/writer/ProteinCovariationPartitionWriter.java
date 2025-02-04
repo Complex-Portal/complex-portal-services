@@ -23,6 +23,7 @@ import java.util.List;
 @SuperBuilder
 public class ProteinCovariationPartitionWriter implements ItemWriter<List<ProteinPairCovariation>>, ItemStream {
 
+    private final int partitionIndex;
     protected final FileConfiguration fileConfiguration;
 
     private ICSVWriter csvWriter;
@@ -44,7 +45,6 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
             throw new ItemStreamException("The output directory has to be a directory: " + outputDirectory.toPath());
         }
 
-        int partitionIndex = executionContext.getInt("partitionIndex");
         File outputFile = new File(outputDirectory, partitionIndex + fileConfiguration.getExtension());
 
         try {

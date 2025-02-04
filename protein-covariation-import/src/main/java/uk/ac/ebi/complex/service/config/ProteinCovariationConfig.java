@@ -4,18 +4,19 @@ import org.springframework.batch.core.ChunkListener;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.SimpleStepBuilder;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.task.SyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import psidev.psi.mi.jami.batch.BasicChunkLoggerListener;
@@ -57,8 +58,19 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    public ProteinCovariationPartitionReader proteinCovariationPartitionReader(FileConfiguration fileConfiguration) {
-        return new ProteinCovariationPartitionReader(fileConfiguration);
+    @StepScope
+    public ProteinCovariationPartitionReader proteinCovariationPartitionReader(
+            FileConfiguration fileConfiguration,
+            @Value("#{stepExecutionContext[startLine]}") int startLine,
+            @Value("#{stepExecutionContext[partitionSize]}") int partitionSize,
+            @Value("#{stepExecutionContext[partitionIndex]}") int partitionIndex) {
+
+        return ProteinCovariationPartitionReader.builder()
+                .fileConfiguration(fileConfiguration)
+                .startLine(startLine)
+                .partitionSize(partitionSize)
+                .partitionIndex(partitionIndex)
+                .build();
     }
 
     @Bean
@@ -90,9 +102,14 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    public ProteinCovariationPartitionWriter proteinCovariationPartitionWriter(FileConfiguration fileConfiguration) {
+    @StepScope
+    public ProteinCovariationPartitionWriter proteinCovariationPartitionWriter(
+            FileConfiguration fileConfiguration,
+            @Value("#{stepExecutionContext[partitionIndex]}") int partitionIndex) {
+
         return ProteinCovariationPartitionWriter.builder()
                 .fileConfiguration(fileConfiguration)
+                .partitionIndex(partitionIndex)
                 .build();
     }
 
@@ -136,16 +153,10 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    public SyncTaskExecutor syncExecutor() {
-        return new SyncTaskExecutor();
-    }
-
-    @Bean
     public Step processProteinCovariationFileStep(
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
-            SyncTaskExecutor syncExecutor,
             ProteinCovariationPartitionReader proteinCovariationPartitionReader,
             ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor,
             ProteinCovariationPartitionWriter proteinCovariationPartitionWriter) throws Exception {
@@ -164,7 +175,6 @@ public class ProteinCovariationConfig {
                 .retryLimit(10)
                 .retry(org.springframework.batch.item.ItemStreamException.class)
                 .retry(javax.net.ssl.SSLHandshakeException.class)
-                .taskExecutor(syncExecutor)
                 .listener((StepExecutionListener) basicChunkLoggerListener)
                 .listener((ChunkListener) basicChunkLoggerListener)
                 .build();
