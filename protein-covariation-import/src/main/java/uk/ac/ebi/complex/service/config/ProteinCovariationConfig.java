@@ -134,10 +134,10 @@ public class ProteinCovariationConfig {
                 .build();
     }
 
-    @Bean
-    public TaskExecutor asyncTaskExecutor() {
-        return new SimpleAsyncTaskExecutor();
-    }
+//    @Bean
+//    public TaskExecutor asyncTaskExecutor() {
+//        return new SimpleAsyncTaskExecutor();
+//    }
 
     @Bean
     public Step processProteinCovariationFileStep(
