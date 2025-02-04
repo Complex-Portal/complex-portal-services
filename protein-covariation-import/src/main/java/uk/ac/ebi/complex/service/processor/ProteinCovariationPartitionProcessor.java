@@ -51,8 +51,6 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         super.open(executionContext);
 
-        log.info("Reading all complexes and proteins (partition)");
-
         complexesInIntact = new HashMap<>();
         try {
             File reportDirectory = new File(fileConfiguration.getReportDirectory());
@@ -93,10 +91,6 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
             throw new ItemStreamException(e);
         }
 
-        log.info("Reading all complexes and proteins (partition) - DONE");
-
-        log.info("Reading protein mappings (partition)");
-
         uniprotProteinMapping = new HashMap<>();
         try {
             File reportDirectory = new File(fileConfiguration.getReportDirectory());
@@ -116,8 +110,6 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
         } catch (IOException e) {
             throw new ItemStreamException(e);
         }
-
-        log.info("Reading protein mappings (partition) - DONE");
     }
 
     @Override
@@ -172,35 +164,9 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
             if (proteinsInIntact.contains(proteinB)) {
                 for (String complexId : complexesInIntact.keySet()) {
                     Set<String> participants = complexesInIntact.get(complexId);
-                    try {
-                        if (participants.stream().anyMatch(p -> p.equals(proteinA))) {
-                            if (participants.stream().anyMatch(p -> p.equals(proteinB))) {
-                                return true;
-                            }
-                        }
-                    }catch (NullPointerException npe) {
-                        if (proteinA != null) {
-                            log.error("proteinA = " + proteinA);
-                        } else {
-                            log.error("proteinA = NULL");
-                        }
-                        if (proteinB != null) {
-                            log.error("proteinB = " + proteinA);
-                        } else {
-                            log.error("proteinB = NULL");
-                        }
-                        log.error("complexId = " + complexId);
-                        if (participants != null) {
-                            log.error("participants.size = " + participants.size());
-                            participants.forEach(participant -> {
-                                if (participant != null) {
-                                    log.error("participant = " + participant);
-                                } else {
-                                    log.error("participant = NULL");
-                                }
-                            });
-                        } else {
-                            log.error("participants = NULL");
+                    if (participants.stream().anyMatch(p -> p.equals(proteinA))) {
+                        if (participants.stream().anyMatch(p -> p.equals(proteinB))) {
+                            return true;
                         }
                     }
                 }
