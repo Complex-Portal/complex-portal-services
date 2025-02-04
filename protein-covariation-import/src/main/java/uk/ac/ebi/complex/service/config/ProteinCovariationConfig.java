@@ -14,8 +14,8 @@ import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import psidev.psi.mi.jami.batch.BasicChunkLoggerListener;
 import psidev.psi.mi.jami.batch.SimpleJobListener;
@@ -163,8 +163,11 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    public TaskExecutor asyncTaskExecutor() {
-        return new SimpleAsyncTaskExecutor();
+    public TaskExecutor threadPoolTaskExecutor() {
+        ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
+        threadPoolTaskExecutor.setCorePoolSize(10);
+        threadPoolTaskExecutor.setMaxPoolSize(10);
+        return threadPoolTaskExecutor;
     }
 
     @Bean
@@ -172,18 +175,18 @@ public class ProteinCovariationConfig {
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
             ProteinCovariationPartitioner proteinCovariationPartitioner,
-            TaskExecutor asyncTaskExecutor,
+            TaskExecutor threadPoolTaskExecutor,
             @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
 
         TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
         partitionHandler.setStep(processProteinCovariationFileStep);
-        partitionHandler.setGridSize(10_000);
+        partitionHandler.setGridSize(1_000);
 
         return new StepBuilder("processProteinCovariationFilePartitionStep")
                 .repository(basicBatchJobRepository.getObject())
                 .partitioner("processProteinCovariationFileStep", proteinCovariationPartitioner)
                 .partitionHandler(partitionHandler)
-                .taskExecutor(asyncTaskExecutor)
+                .taskExecutor(threadPoolTaskExecutor)
                 .listener(basicChunkLoggerListener)
                 .listener((ChunkListener) basicChunkLoggerListener)
                 .build();
