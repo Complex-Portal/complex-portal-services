@@ -128,8 +128,29 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
         List<ProteinPairCovariation> pairs = new ArrayList<>();
 
         for (String proteinA : proteinCovariation.getProteinA()) {
-            for (String proteinB : proteinCovariation.getProteinB()) {
-                addCovariationIfProteinsPartOfComplex(pairs, proteinA, proteinB, proteinCovariation.getProbability());
+            pairs.addAll(expandProteinCovariationB(proteinCovariation, proteinA));
+            if (uniprotProteinMapping.containsKey(proteinA)) {
+                String newProteinA = uniprotProteinMapping.get(proteinA);
+                if (!proteinCovariation.getProteinA().contains(newProteinA)) {
+                    pairs.addAll(expandProteinCovariationB(proteinCovariation, newProteinA));
+                }
+            }
+
+        }
+
+        return pairs;
+    }
+
+    protected List<ProteinPairCovariation> expandProteinCovariationB(ProteinCovariation proteinCovariation, String proteinA) {
+        List<ProteinPairCovariation> pairs = new ArrayList<>();
+
+        for (String proteinB : proteinCovariation.getProteinB()) {
+            addCovariationIfProteinsPartOfComplex(pairs, proteinA, proteinB, proteinCovariation.getProbability());
+            if (uniprotProteinMapping.containsKey(proteinB)) {
+                String newProteinB = uniprotProteinMapping.get(proteinB);
+                if (!proteinCovariation.getProteinB().contains(newProteinB)) {
+                    addCovariationIfProteinsPartOfComplex(pairs, proteinA, newProteinB, proteinCovariation.getProbability());
+                }
             }
         }
 
@@ -144,26 +165,6 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
 
         if (isProteinPairPartOfComplex(proteinA, proteinB)) {
             pairs.add(new ProteinPairCovariation(proteinA, proteinB, probability));
-        }
-
-        if (uniprotProteinMapping.containsKey(proteinA)) {
-            String newProteinA = uniprotProteinMapping.get(proteinA);
-            if (isProteinPairPartOfComplex(newProteinA, proteinB)) {
-                pairs.add(new ProteinPairCovariation(newProteinA, proteinB, probability));
-            }
-
-            if (uniprotProteinMapping.containsKey(proteinB)) {
-                String newProteinB = uniprotProteinMapping.get(proteinB);
-                if (isProteinPairPartOfComplex(newProteinA, newProteinB)) {
-                    pairs.add(new ProteinPairCovariation(newProteinA, newProteinB, probability));
-                }
-            }
-        }
-        if (uniprotProteinMapping.containsKey(proteinB)) {
-            String newProteinB = uniprotProteinMapping.get(proteinB);
-            if (isProteinPairPartOfComplex(proteinA, newProteinB)) {
-                pairs.add(new ProteinPairCovariation(proteinA, newProteinB, probability));
-            }
         }
     }
 

@@ -4,6 +4,7 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemStream;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 
+@Log4j
 @RequiredArgsConstructor
 public class ProteinCovariationPartitionReader implements ItemReader<ProteinCovariation>, ItemStream {
 
@@ -32,7 +34,7 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
 
     @Override
     public ProteinCovariation read() {
-        if (csvIterator.hasNext() && linesRead > partitionSize) {
+        if (csvIterator.hasNext() && linesRead < partitionSize) {
             String[] csvLine = csvIterator.next();
             linesRead++;
             return proteinCovariationFromStringArray(csvLine);
@@ -43,6 +45,9 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
+
+        int partitionIndex = executionContext.getInt("partitionIndex");
+        log.info("Reading covariations from partition " + partitionIndex);
 
         int startLine = executionContext.getInt("startLine");
         partitionSize = executionContext.getInt("partitionSize");
