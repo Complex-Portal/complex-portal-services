@@ -16,6 +16,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Log4j
@@ -35,12 +36,12 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
             throw new ItemStreamException("Report file writer could not be opened", e);
         }
 
-        File outputDirectory = fileConfiguration.outputPath().toFile();
+        File outputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getReportDirectory()).toFile();
         if (!outputDirectory.exists()) {
             outputDirectory.mkdirs();
         }
         if (!outputDirectory.isDirectory()) {
-            throw new ItemStreamException("The output directory has to be a directory: " + fileConfiguration.outputPath());
+            throw new ItemStreamException("The output directory has to be a directory: " + outputDirectory.toPath());
         }
 
         int partitionIndex = executionContext.getInt("partitionIndex");
