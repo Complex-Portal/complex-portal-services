@@ -67,17 +67,10 @@ public class ProteinCovariationConfig {
 
     @Bean
     public ProteinCovariationBatchProcessor proteinCovariationBatchProcessor(
-            FileConfiguration fileConfiguration,
-            IntactDao intactDao,
-            UniProtMappingService uniProtMappingService,
-            ComplexService complexService) {
+            FileConfiguration fileConfiguration) {
 
         return ProteinCovariationBatchProcessor.builder()
                 .fileConfiguration(fileConfiguration)
-                .intactDao(intactDao)
-                .uniProtMappingService(uniProtMappingService)
-                .proteinIdsReader(new ProteinIdsReader(fileConfiguration))
-                .complexService(complexService)
                 .build();
     }
 
@@ -176,27 +169,27 @@ public class ProteinCovariationConfig {
                 .build();
     }
 
-    @Bean
-    public Step processProteinCovariationFilePartitionStep(
-            JobRepositoryFactoryBean basicBatchJobRepository,
-            BasicChunkLoggerListener basicChunkLoggerListener,
-            ProteinCovariationPartitioner proteinCovariationPartitioner,
-            TaskExecutor asyncTaskExecutor,
-            @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
-
-        TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
-        partitionHandler.setStep(processProteinCovariationFileStep);
-        partitionHandler.setGridSize(10_000);
-
-        return new StepBuilder("processProteinCovariationFilePartitionStep")
-                .repository(basicBatchJobRepository.getObject())
-                .partitioner("processProteinCovariationFileStep", proteinCovariationPartitioner)
-                .partitionHandler(partitionHandler)
-                .taskExecutor(asyncTaskExecutor)
-                .listener(basicChunkLoggerListener)
-                .listener((ChunkListener) basicChunkLoggerListener)
-                .build();
-    }
+//    @Bean
+//    public Step processProteinCovariationFilePartitionStep(
+//            JobRepositoryFactoryBean basicBatchJobRepository,
+//            BasicChunkLoggerListener basicChunkLoggerListener,
+//            ProteinCovariationPartitioner proteinCovariationPartitioner,
+//            TaskExecutor asyncTaskExecutor,
+//            @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
+//
+//        TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
+//        partitionHandler.setStep(processProteinCovariationFileStep);
+//        partitionHandler.setGridSize(10_000);
+//
+//        return new StepBuilder("processProteinCovariationFilePartitionStep")
+//                .repository(basicBatchJobRepository.getObject())
+//                .partitioner("processProteinCovariationFileStep", proteinCovariationPartitioner)
+//                .partitionHandler(partitionHandler)
+//                .taskExecutor(asyncTaskExecutor)
+//                .listener(basicChunkLoggerListener)
+//                .listener((ChunkListener) basicChunkLoggerListener)
+//                .build();
+//    }
 
     @Bean
     public Step importProteinCovariationsStep(
@@ -212,7 +205,7 @@ public class ProteinCovariationConfig {
                 basicBatchJobRepository);
 
         return new SimpleStepBuilder<List<ProteinPairCovariation>, List<ProteinPairCovariation>>(basicStep)
-                .chunk(250)
+                .chunk(100)
                 .reader(proteinCovariationPairBatchReader)
                 .writer(proteinCovariationPairBatchWriter)
                 .faultTolerant()
@@ -229,13 +222,13 @@ public class ProteinCovariationConfig {
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
 //            @Qualifier("preProcessCovariationFile") Step preProcessCovariationFile,
-            @Qualifier("processProteinCovariationFilePartitionStep") Step processProteinCovariationFilePartitionStep) throws Exception {
+            @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
 
         return new JobBuilder("processProteinCovariationFileJob")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
 //                .start(preProcessCovariationFile)
-                .start(processProteinCovariationFilePartitionStep)
+                .start(processProteinCovariationFileStep)
                 .build();
     }
 

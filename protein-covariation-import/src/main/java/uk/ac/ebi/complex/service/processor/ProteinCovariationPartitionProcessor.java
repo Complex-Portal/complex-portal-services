@@ -135,7 +135,6 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
                     pairs.addAll(expandProteinCovariationB(proteinCovariation, newProteinA));
                 }
             }
-
         }
 
         return pairs;
