@@ -19,12 +19,16 @@ import psidev.psi.mi.jami.batch.SimpleJobListener;
 import uk.ac.ebi.complex.service.model.ProteinCovariation;
 import uk.ac.ebi.complex.service.model.ProteinPairCovariation;
 import uk.ac.ebi.complex.service.processor.ProteinCovariationBatchProcessor;
+import uk.ac.ebi.complex.service.processor.ProteinCovariationPartitionProcessor;
+import uk.ac.ebi.complex.service.processor.ProteinCovariationPreProcessTasklet;
 import uk.ac.ebi.complex.service.reader.ProteinCovariationBatchReader;
 import uk.ac.ebi.complex.service.reader.ProteinCovariationPairBatchReader;
+import uk.ac.ebi.complex.service.reader.ProteinCovariationPartitionReader;
 import uk.ac.ebi.complex.service.reader.ProteinIdsReader;
 import uk.ac.ebi.complex.service.service.UniProtMappingService;
 import uk.ac.ebi.complex.service.writer.ProteinCovariationBatchWriter;
 import uk.ac.ebi.complex.service.writer.ProteinCovariationPairBatchWriter;
+import uk.ac.ebi.complex.service.writer.ProteinCovariationPartitionWriter;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 import uk.ac.ebi.intact.jami.service.ProteinPairCovariationService;
@@ -45,6 +49,11 @@ public class ProteinCovariationConfig {
     @Bean
     public ProteinCovariationBatchReader proteinCovariationBatchReader(FileConfiguration fileConfiguration) {
         return new ProteinCovariationBatchReader(fileConfiguration);
+    }
+
+    @Bean
+    public ProteinCovariationPartitionReader proteinCovariationPartitionReader(FileConfiguration fileConfiguration) {
+        return new ProteinCovariationPartitionReader(fileConfiguration);
     }
 
     @Bean
@@ -69,8 +78,22 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
+    public ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor(FileConfiguration fileConfiguration) {
+        return ProteinCovariationPartitionProcessor.builder()
+                .fileConfiguration(fileConfiguration)
+                .build();
+    }
+
+    @Bean
     public ProteinCovariationBatchWriter proteinCovariationBatchWriter(FileConfiguration fileConfiguration) {
         return ProteinCovariationBatchWriter.builder()
+                .fileConfiguration(fileConfiguration)
+                .build();
+    }
+
+    @Bean
+    public ProteinCovariationPartitionWriter proteinCovariationPartitionWriter(FileConfiguration fileConfiguration) {
+        return ProteinCovariationPartitionWriter.builder()
                 .fileConfiguration(fileConfiguration)
                 .build();
     }
@@ -91,30 +114,68 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
+    public ProteinCovariationPreProcessTasklet proteinCovariationPreProcessTasklet(
+            ComplexService complexService,
+            UniProtMappingService uniProtMappingService,
+            FileConfiguration fileConfiguration) {
+
+        return new ProteinCovariationPreProcessTasklet(
+                complexService,
+                uniProtMappingService,
+                new ProteinIdsReader(fileConfiguration),
+                fileConfiguration);
+    }
+
+    @Bean
+    public Step preProcessCovariationFile(
+            PlatformTransactionManager jamiTransactionManager,
+            JobRepositoryFactoryBean basicBatchJobRepository,
+            ProteinCovariationPreProcessTasklet proteinCovariationPreProcessTasklet) throws Exception {
+
+        return basicStepBuilder("preProcessCovariationFile", jamiTransactionManager, basicBatchJobRepository)
+                .tasklet(proteinCovariationPreProcessTasklet)
+                .build();
+    }
+
+    @Bean
     public Step processProteinCovariationFileStep(
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
-            ProteinCovariationBatchReader proteinCovariationBatchReader,
-            ProteinCovariationBatchProcessor proteinCovariationBatchProcessor,
-            ProteinCovariationBatchWriter proteinCovariationBatchWriter) throws Exception {
+            ProteinCovariationPartitionReader proteinCovariationPartitionReader,
+            ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor,
+            ProteinCovariationPartitionWriter proteinCovariationPartitionWriter) throws Exception {
 
         StepBuilder basicStep = basicStepBuilder(
                 "processProteinCovariationFileStep",
                 jamiTransactionManager,
                 basicBatchJobRepository);
 
-        return new SimpleStepBuilder<List<ProteinCovariation>, List<ProteinPairCovariation>>(basicStep)
-                .chunk(50)
-                .reader(proteinCovariationBatchReader)
-                .processor(proteinCovariationBatchProcessor)
-                .writer(proteinCovariationBatchWriter)
+        return new SimpleStepBuilder<ProteinCovariation, List<ProteinPairCovariation>>(basicStep)
+                .chunk(100)
+                .reader(proteinCovariationPartitionReader)
+                .processor(proteinCovariationPartitionProcessor)
+                .writer(proteinCovariationPartitionWriter)
                 .faultTolerant()
                 .retryLimit(10)
                 .retry(org.springframework.batch.item.ItemStreamException.class)
                 .retry(javax.net.ssl.SSLHandshakeException.class)
                 .listener((StepExecutionListener) basicChunkLoggerListener)
                 .listener((ChunkListener) basicChunkLoggerListener)
+                .build();
+    }
+
+    @Bean
+    public Step processProteinCovariationFilePartitionStep(
+            JobRepositoryFactoryBean basicBatchJobRepository,
+            BasicChunkLoggerListener basicChunkLoggerListener,
+            @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
+
+        return new StepBuilder("processProteinCovariationFilePartitionStep")
+                .repository(basicBatchJobRepository.getObject())
+                .partitioner(processProteinCovariationFileStep)
+                .gridSize(1_000_000)
+                .listener(basicChunkLoggerListener)
                 .build();
     }
 
@@ -148,12 +209,14 @@ public class ProteinCovariationConfig {
     public Job processProteinCovariationFileJob(
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
-            @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
+            @Qualifier("preProcessCovariationFile") Step preProcessCovariationFile,
+            @Qualifier("processProteinCovariationFilePartitionStep") Step processProteinCovariationFilePartitionStep) throws Exception {
 
         return new JobBuilder("processProteinCovariationFileJob")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
-                .start(processProteinCovariationFileStep)
+                .start(preProcessCovariationFile)
+                .next(processProteinCovariationFilePartitionStep)
                 .build();
     }
 

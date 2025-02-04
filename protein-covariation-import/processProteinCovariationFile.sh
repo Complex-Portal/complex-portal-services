@@ -20,7 +20,7 @@
 #fi
 
 INPUT_FILE=/homes/mi/RF_predictions.csv
-OUTPUT_FILE_NAME=output_temp
+OUTPUT_FILE_NAME=partition_output
 REPORT_DIR=/nfs/production/hhe/intact/data/protein-covariation-files
 SEPARATOR=,
 HEADER=true
