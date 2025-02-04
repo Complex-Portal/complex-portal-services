@@ -66,7 +66,7 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
             } else {
                 try {
                     csvReader.skip(startLine);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     log.error(e);
                     log.error("partitionIndex = " + partitionIndex + ", startLine = " + startLine + ", partitionSize = " + partitionSize);
                 }
