@@ -4,7 +4,6 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import lombok.Builder;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
@@ -23,7 +22,6 @@ import java.util.stream.Collectors;
 
 @Log4j
 @Builder
-@RequiredArgsConstructor
 public class ProteinCovariationPartitionReader implements ItemReader<ProteinCovariation>, ItemStream {
 
     private final int partitionSize;
