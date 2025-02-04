@@ -5,6 +5,7 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
 import org.springframework.batch.core.step.builder.SimpleStepBuilder;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -173,12 +174,16 @@ public class ProteinCovariationConfig {
             ProteinCovariationPartitioner proteinCovariationPartitioner,
             @Qualifier("processProteinCovariationFileStep") Step processProteinCovariationFileStep) throws Exception {
 
+        TaskExecutorPartitionHandler partitionHandler = new TaskExecutorPartitionHandler();
+        partitionHandler.setStep(processProteinCovariationFileStep);
+        partitionHandler.setGridSize(1_000_000);
+
         return new StepBuilder("processProteinCovariationFilePartitionStep")
                 .repository(basicBatchJobRepository.getObject())
                 .partitioner("processProteinCovariationFileStep", proteinCovariationPartitioner)
-                .step(processProteinCovariationFileStep)
-                .gridSize(1_000_000)
+                .partitionHandler(partitionHandler)
                 .listener(basicChunkLoggerListener)
+                .listener((ChunkListener) basicChunkLoggerListener)
                 .build();
     }
 
