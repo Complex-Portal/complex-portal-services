@@ -172,9 +172,34 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
             if (proteinsInIntact.contains(proteinB)) {
                 for (String complexId : complexesInIntact.keySet()) {
                     Set<String> participants = complexesInIntact.get(complexId);
-                    if (participants.stream().anyMatch(p -> p.equals(proteinA))) {
-                        if (participants.stream().anyMatch(p -> p.equals(proteinB))) {
-                            return true;
+                    try {
+                        if (participants.stream().anyMatch(p -> p.equals(proteinA))) {
+                            if (participants.stream().anyMatch(p -> p.equals(proteinB))) {
+                                return true;
+                            }
+                        }
+                    }catch (NullPointerException npe) {
+                        if (proteinA != null) {
+                            log.error("proteinA = " + proteinA);
+                        } else {
+                            log.error("proteinA = NULL");
+                        }
+                        if (proteinB != null) {
+                            log.error("proteinB = " + proteinA);
+                        } else {
+                            log.error("proteinB = NULL");
+                        }
+                        if (participants != null) {
+                            log.error("participants.size = " + participants.size());
+                            participants.forEach(participant -> {
+                                if (participant != null) {
+                                    log.error("participant = " + participant);
+                                } else {
+                                    log.error("participant = NULL");
+                                }
+                            });
+                        } else {
+                            log.error("participants = NULL");
                         }
                     }
                 }
