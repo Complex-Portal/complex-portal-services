@@ -89,9 +89,14 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    public ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor(FileConfiguration fileConfiguration) {
+    @StepScope
+    public ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor(
+            FileConfiguration fileConfiguration,
+            @Value("#{stepExecutionContext[partitionIndex]}") int partitionIndex) {
+
         return ProteinCovariationPartitionProcessor.builder()
                 .fileConfiguration(fileConfiguration)
+                .partitionIndex(partitionIndex)
                 .build();
     }
 

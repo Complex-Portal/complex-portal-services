@@ -7,9 +7,8 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
+import uk.ac.ebi.complex.service.config.FileConfiguration;
 import uk.ac.ebi.complex.service.model.ProteinCovariation;
 import uk.ac.ebi.complex.service.model.ProteinPairCovariation;
 
@@ -27,6 +26,8 @@ import java.util.Set;
 @Log4j
 @SuperBuilder
 public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor<ProteinCovariation, List<ProteinPairCovariation>> {
+
+    private final int partitionIndex;
 
     private Map<String, String> uniprotProteinMapping;
     private Set<String> proteinsInIntact;
@@ -47,7 +48,6 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
     }
 
     @Override
-    @Transactional(readOnly = true, propagation = Propagation.REQUIRED, value = "jamiTransactionManager")
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         super.open(executionContext);
 
