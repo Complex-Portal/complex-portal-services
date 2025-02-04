@@ -47,11 +47,11 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
         Assert.notNull(executionContext, "ExecutionContext must not be null");
 
         int partitionIndex = executionContext.getInt("partitionIndex");
-        log.info("Reading covariations from partition " + partitionIndex);
-
         int startLine = executionContext.getInt("startLine");
         partitionSize = executionContext.getInt("partitionSize");
         linesRead = 0;
+
+        log.info("Reading covariations from partition " + partitionIndex + ", from line " + startLine);
 
         BufferedReader reader = null;
         try {
