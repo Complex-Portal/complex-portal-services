@@ -53,7 +53,9 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
         File inputDirectory = new File(fileConfiguration.getInputFileName());
         Collection<File> inputFiles = FileUtils.listFiles(inputDirectory, new String[]{ fileConfiguration.getExtension() }, false);
         fileIterator = inputFiles.iterator();
-        loadNextFile();
+        if (fileIterator.hasNext()) {
+            loadNextFile();
+        }
     }
 
     @Override
@@ -71,7 +73,7 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
     }
 
     private boolean hasNext() {
-        if (csvIterator.hasNext()) {
+        if (csvIterator != null && csvIterator.hasNext()) {
             return true;
         } else if (fileIterator.hasNext()) {
             loadNextFile();
@@ -93,7 +95,7 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
             }
 
             csvIterator = csvReader.iterator();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new ItemStreamException(e);
         }
     }
