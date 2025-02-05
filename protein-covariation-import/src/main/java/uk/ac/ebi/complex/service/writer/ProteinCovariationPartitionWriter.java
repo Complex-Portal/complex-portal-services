@@ -4,7 +4,6 @@ import com.opencsv.CSVWriterBuilder;
 import com.opencsv.ICSVWriter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
-import org.apache.commons.io.FileUtils;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
@@ -39,16 +38,9 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
         }
 
         File outputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getOutputFileName()).toFile();
-        if (outputDirectory.exists()) {
-            try {
-                log.info("Deleting previous data...");
-                FileUtils.deleteDirectory(outputDirectory);
-                log.info("Previous data deleted.");
-            } catch (IOException e) {
-                throw new ItemStreamException(e);
-            }
+        if (!outputDirectory.exists()) {
+            outputDirectory.mkdirs();
         }
-        outputDirectory.mkdirs();
         if (!outputDirectory.isDirectory()) {
             throw new ItemStreamException("The output directory has to be a directory: " + outputDirectory.toPath());
         }
