@@ -187,6 +187,7 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
+    @StepScope
     public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
         threadPoolTaskExecutor.setCorePoolSize(25);
