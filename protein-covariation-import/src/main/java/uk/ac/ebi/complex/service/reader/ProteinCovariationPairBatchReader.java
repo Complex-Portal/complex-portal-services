@@ -51,8 +51,7 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
         Assert.notNull(executionContext, "ExecutionContext must not be null");
 
         File inputDirectory = new File(fileConfiguration.getInputFileName());
-        Collection<File> inputFiles = FileUtils.listFiles(inputDirectory, new String[]{ fileConfiguration.getExtension() }, false);
-        fileIterator = inputFiles.iterator();
+        fileIterator = FileUtils.iterateFiles(inputDirectory, null, false);
         if (fileIterator.hasNext()) {
             loadNextFile();
         }
@@ -66,7 +65,9 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
     @Override
     public void close() throws ItemStreamException {
         try {
-            csvReader.close();
+            if (csvReader != null) {
+                csvReader.close();
+            }
         } catch (IOException e) {
             throw new ItemStreamException(e);
         }
@@ -86,6 +87,9 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
         File nextFile = fileIterator.next();
         try {
             BufferedReader reader = new BufferedReader(new FileReader(nextFile));
+            if (csvReader != null) {
+                csvReader.close();
+            }
             csvReader = new CSVReaderBuilder(reader)
                     .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
                     .build();
@@ -95,7 +99,7 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
             }
 
             csvIterator = csvReader.iterator();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new ItemStreamException(e);
         }
     }
