@@ -28,6 +28,9 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
 
     private ICSVWriter csvWriter;
 
+    public void destroy() {
+    }
+
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
