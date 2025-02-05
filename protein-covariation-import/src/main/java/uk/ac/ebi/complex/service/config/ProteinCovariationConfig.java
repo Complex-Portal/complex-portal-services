@@ -159,7 +159,6 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    @StepScope
     public Step processProteinCovariationFileStep(
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
@@ -196,7 +195,6 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    @StepScope
     public Step processProteinCovariationFilePartitionStep(
             JobRepositoryFactoryBean basicBatchJobRepository,
             BasicChunkLoggerListener basicChunkLoggerListener,
