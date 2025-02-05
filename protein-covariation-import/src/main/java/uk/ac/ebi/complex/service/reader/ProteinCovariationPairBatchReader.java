@@ -95,7 +95,7 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
             }
 
             csvIterator = csvReader.iterator();
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new ItemStreamException(e);
         }
     }
