@@ -58,7 +58,7 @@ public class ProteinCovariationConfig {
         return new ProteinCovariationBatchReader(fileConfiguration);
     }
 
-    @Bean(destroyMethod="destroy")
+    @Bean
     @StepScope
     public ProteinCovariationPartitionReader proteinCovariationPartitionReader(
             FileConfiguration fileConfiguration,
@@ -107,7 +107,7 @@ public class ProteinCovariationConfig {
                 .build();
     }
 
-    @Bean(destroyMethod="destroy")
+    @Bean
     @StepScope
     public ProteinCovariationPartitionWriter proteinCovariationPartitionWriter(
             FileConfiguration fileConfiguration,

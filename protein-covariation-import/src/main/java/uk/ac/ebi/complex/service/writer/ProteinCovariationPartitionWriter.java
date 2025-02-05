@@ -4,6 +4,7 @@ import com.opencsv.CSVWriterBuilder;
 import com.opencsv.ICSVWriter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
+import org.apache.commons.io.FileUtils;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
@@ -28,9 +29,6 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
 
     private ICSVWriter csvWriter;
 
-    public void destroy() {
-    }
-
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
@@ -41,9 +39,16 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
         }
 
         File outputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getOutputFileName()).toFile();
-        if (!outputDirectory.exists()) {
-            outputDirectory.mkdirs();
+        if (outputDirectory.exists()) {
+            try {
+                log.info("Deleting previous data...");
+                FileUtils.deleteDirectory(outputDirectory);
+                log.info("Previous data deleted.");
+            } catch (IOException e) {
+                throw new ItemStreamException(e);
+            }
         }
+        outputDirectory.mkdirs();
         if (!outputDirectory.isDirectory()) {
             throw new ItemStreamException("The output directory has to be a directory: " + outputDirectory.toPath());
         }
@@ -72,12 +77,13 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
 
     @Override
     public void close() throws ItemStreamException {
-        try {
-            log.info("Closing csvWriter for partition: " + partitionIndex);
-            csvWriter.close();
-        } catch (IOException e) {
-            log.error("Error when closing csvWriter for partition: " + partitionIndex);
-            throw new ItemStreamException(e);
+        if (csvWriter != null) {
+            try {
+                csvWriter.close();
+                csvWriter = null;
+            } catch (IOException e) {
+                throw new ItemStreamException(e);
+            }
         }
     }
 
@@ -86,6 +92,7 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
         items.forEach(proteinCovariations ->
                 proteinCovariations.forEach(proteinCovariation ->
                         csvWriter.writeNext(proteinCovariationToStringArray(proteinCovariation))));
+        csvWriter.flush();
     }
 
     protected void initialiseReportWriters() throws IOException {

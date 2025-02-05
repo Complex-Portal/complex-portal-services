@@ -34,9 +34,6 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
 
     private int linesRead;
 
-    public void destroy() {
-    }
-
     @Override
     public ProteinCovariation read() {
         if (csvIterator.hasNext() && linesRead < partitionSize) {
@@ -82,10 +79,13 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
 
     @Override
     public void close() throws ItemStreamException {
-        try {
-            csvReader.close();
-        } catch (IOException e) {
-            throw new ItemStreamException(e);
+        if (csvIterator != null) {
+            try {
+                csvReader.close();
+                csvReader = null;
+            } catch (IOException e) {
+                throw new ItemStreamException(e);
+            }
         }
     }
 
