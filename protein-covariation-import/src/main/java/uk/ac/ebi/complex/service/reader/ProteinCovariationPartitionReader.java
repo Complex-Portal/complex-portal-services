@@ -79,7 +79,7 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
 
     @Override
     public void close() throws ItemStreamException {
-        if (csvIterator != null) {
+        if (csvReader != null) {
             try {
                 csvReader.close();
                 csvReader = null;
