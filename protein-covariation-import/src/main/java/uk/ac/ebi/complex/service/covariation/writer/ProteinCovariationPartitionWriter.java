@@ -98,7 +98,7 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
     }
 
     private String[] headerLine() {
-        return new String[]{"protein_a", "protein_b", "confidence"};
+        return new String[]{"protein_a_ac", "protein_b_ac", "confidence"};
     }
 
     private String[] proteinCovariationToStringArray(ProteinPairCovariation proteinCovariation) {

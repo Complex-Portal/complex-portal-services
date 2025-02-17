@@ -11,6 +11,7 @@ import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.repeat.RepeatStatus;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Interactor;
+import psidev.psi.mi.jami.model.InteractorPool;
 import psidev.psi.mi.jami.model.Participant;
 import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
@@ -18,6 +19,9 @@ import uk.ac.ebi.complex.service.covariation.logging.ProteinFailedWriter;
 import uk.ac.ebi.complex.service.batch.model.UniprotProtein;
 import uk.ac.ebi.complex.service.covariation.reader.ProteinIdsReader;
 import uk.ac.ebi.complex.service.batch.service.UniProtMappingService;
+import uk.ac.ebi.intact.jami.model.extension.IntactInteractor;
+import uk.ac.ebi.intact.jami.model.extension.IntactInteractorPool;
+import uk.ac.ebi.intact.jami.model.extension.IntactProtein;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 
 import java.io.BufferedWriter;
@@ -56,7 +60,7 @@ public class ProteinCovariationPreProcessTasklet implements Tasklet {
     private void loadAndSaveAllComplexesAndProteinsInIntact() throws IOException {
         log.info("Reading all complexes and proteins");
 
-        Set<String> proteinsInIntact = new HashSet<>();
+        Map<String, Set<String>> proteinsInIntact = new HashMap<>();
         Map<String, Set<String>> complexesInIntact = new HashMap<>();
         long count = 0;
 
@@ -67,20 +71,40 @@ public class ProteinCovariationPreProcessTasklet implements Tasklet {
                 log.info("Processed " + count + " complexes");
             }
             Complex complex = complexIterator.next();
-            Set<String> participantIds = new HashSet<>();
+            Set<String> participantAcs = new HashSet<>();
             for (Participant participant : complex.getParticipants()) {
                 if (participant.getInteractor() != null) {
-                    Interactor interactor = participant.getInteractor();
-                    if (interactor.getPreferredIdentifier() != null) {
-                        Xref xref = interactor.getPreferredIdentifier();
-                        if (xref.getId() != null && !xref.getId().isEmpty()) {
-                            participantIds.add(xref.getId());
+                    IntactInteractor interactor = (IntactInteractor) participant.getInteractor();
+                    Set<String> interactorIds = new HashSet<>();
+                    if (interactor instanceof IntactInteractorPool) {
+                        InteractorPool interactorPool = (InteractorPool) interactor;
+                        for (Interactor subInteractor : interactorPool) {
+                            if (subInteractor instanceof IntactProtein) {
+                                if (subInteractor.getPreferredIdentifier() != null) {
+                                    Xref xref = subInteractor.getPreferredIdentifier();
+                                    if (xref.getId() != null && !xref.getId().isEmpty()) {
+                                        interactorIds.add(xref.getId());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (interactor instanceof IntactProtein || interactor instanceof IntactInteractorPool) {
+                        participantAcs.add(interactor.getAc());
+                        if (interactor.getPreferredIdentifier() != null) {
+                            Xref xref = interactor.getPreferredIdentifier();
+                            if (xref.getId() != null && !xref.getId().isEmpty()) {
+                                interactorIds.add(xref.getId());
+                            }
+                        }
+                        for (String interactorId : interactorIds) {
+                            proteinsInIntact.putIfAbsent(interactorId, new HashSet<>());
+                            proteinsInIntact.get(interactorId).add(interactor.getAc());
                         }
                     }
                 }
             }
-            complexesInIntact.putIfAbsent(complex.getPreferredIdentifier().getId(), participantIds);
-            proteinsInIntact.addAll(participantIds);
+            complexesInIntact.putIfAbsent(complex.getPreferredIdentifier().getId(), participantAcs);
         }
 
         log.info("Reading all complexes and proteins - DONE");
@@ -114,10 +138,11 @@ public class ProteinCovariationPreProcessTasklet implements Tasklet {
                 .build();
 
         if (fileConfiguration.isHeader()) {
-            csvWriter.writeNext(new String[]{ "protein_id" });
+            csvWriter.writeNext(new String[]{ "protein_id", "protein_acs" });
         }
-        for (String proteinId: proteinsInIntact) {
-            csvWriter.writeNext(new String[]{ proteinId });
+        for (String proteinId: proteinsInIntact.keySet()) {
+            Set<String> proteinAcs = proteinsInIntact.get(proteinId);
+            csvWriter.writeNext(new String[]{ proteinId, String.join(";", proteinAcs) });
         }
         csvWriter.close();
 

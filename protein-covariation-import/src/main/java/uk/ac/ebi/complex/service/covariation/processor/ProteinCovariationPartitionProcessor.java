@@ -18,7 +18,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +29,7 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
     private final int partitionIndex;
 
     private Map<String, String> uniprotProteinMapping;
-    private Set<String> proteinsInIntact;
+    private Map<String, Set<String>> proteinsInIntact;
     private Map<String, Set<String>> complexesInIntact;
 
     @Override
@@ -71,7 +70,7 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
             throw new ItemStreamException(e);
         }
 
-        proteinsInIntact = new HashSet<>();
+        proteinsInIntact = new HashMap<>();
         try {
             File reportDirectory = new File(fileConfiguration.getReportDirectory());
             File proteinsFile = new File(reportDirectory, "proteins" + fileConfiguration.getExtension());
@@ -84,7 +83,7 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
                 csvReader.skip(1);
             }
             for (String[] row : csvReader) {
-                proteinsInIntact.add(row[0]);
+                proteinsInIntact.put(row[0], Set.of(row[1].split(";")));
             }
             csvReader.close();
         } catch (IOException e) {
@@ -154,24 +153,23 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
             String proteinB,
             Double probability) {
 
-        if (isProteinPairPartOfComplex(proteinA, proteinB)) {
-            pairs.add(new ProteinPairCovariation(proteinA, proteinB, probability));
-        }
-    }
-
-    private boolean isProteinPairPartOfComplex(String proteinA, String proteinB) {
-        if (proteinsInIntact.contains(proteinA)) {
-            if (proteinsInIntact.contains(proteinB)) {
+        if (proteinsInIntact.containsKey(proteinA)) {
+            Set<String> proteinAcsA = proteinsInIntact.get(proteinA);
+            if (proteinsInIntact.containsKey(proteinB)) {
+                Set<String> proteinAcsB = proteinsInIntact.get(proteinB);
                 for (String complexId : complexesInIntact.keySet()) {
                     Set<String> participants = complexesInIntact.get(complexId);
-                    if (participants.stream().anyMatch(p -> p.equals(proteinA))) {
-                        if (participants.stream().anyMatch(p -> p.equals(proteinB))) {
-                            return true;
+                    for (String participantA : participants) {
+                        if (proteinAcsA.contains(participantA)) {
+                            for (String participantB : participants) {
+                                if (proteinAcsB.contains(participantB)) {
+                                    pairs.add(new ProteinPairCovariation(participantA, participantB, probability));
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        return false;
     }
 }
