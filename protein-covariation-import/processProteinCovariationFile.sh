@@ -20,10 +20,9 @@ if [ $# -ne 5 ]; then
 fi
 
 INPUT_FILE=$1
-OUTPUT_DIRECTORY=$2
-OUTPUT_DIR_NAME=$3
+OUTPUT_DIR_NAME=$2
+OUTPUT_DIRECTORY=$3
 SEPARATOR=$4
 HEADER=$5
 
 mvn clean -U install -P run-protein-covariation-job -Djob.name=processProteinCovariationFileJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
-
