@@ -9,7 +9,7 @@ import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.util.Assert;
-import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
+import uk.ac.ebi.complex.service.covariation.config.CovariationFileConfiguration;
 import uk.ac.ebi.complex.service.covariation.model.ProteinPairCovariation;
 
 import java.io.BufferedWriter;
@@ -24,7 +24,7 @@ import java.util.List;
 public class ProteinCovariationPartitionWriter implements ItemWriter<List<ProteinPairCovariation>>, ItemStream {
 
     private final int partitionIndex;
-    protected final FileConfiguration fileConfiguration;
+    protected final CovariationFileConfiguration fileConfiguration;
 
     private ICSVWriter csvWriter;
 
@@ -37,7 +37,7 @@ public class ProteinCovariationPartitionWriter implements ItemWriter<List<Protei
             throw new ItemStreamException("Report file writer could not be opened", e);
         }
 
-        File outputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getOutputFileName()).toFile();
+        File outputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getProcessOutputDirName()).toFile();
         if (!outputDirectory.exists()) {
             outputDirectory.mkdirs();
         }

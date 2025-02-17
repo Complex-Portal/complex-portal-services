@@ -10,7 +10,7 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
-import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
+import uk.ac.ebi.complex.service.covariation.config.CovariationFileConfiguration;
 import uk.ac.ebi.complex.service.covariation.model.ProteinCovariation;
 
 import java.io.BufferedReader;
@@ -27,7 +27,7 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
     private final int partitionSize;
     private final int partitionIndex;
     private final int startLine;
-    private final FileConfiguration fileConfiguration;
+    private final CovariationFileConfiguration fileConfiguration;
 
     private CSVReader csvReader;
     private Iterator<String[]> csvIterator;

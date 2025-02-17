@@ -22,7 +22,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import psidev.psi.mi.jami.batch.BasicChunkLoggerListener;
 import psidev.psi.mi.jami.batch.SimpleJobListener;
 import uk.ac.ebi.complex.service.batch.config.AppProperties;
-import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
 import uk.ac.ebi.complex.service.covariation.model.ProteinCovariation;
 import uk.ac.ebi.complex.service.covariation.model.ProteinPairCovariation;
 import uk.ac.ebi.complex.service.covariation.partitioner.ProteinCovariationPartitioner;
@@ -55,7 +54,7 @@ public class ProteinCovariationConfig {
     @Bean
     @StepScope
     public ProteinCovariationPartitionReader proteinCovariationPartitionReader(
-            FileConfiguration fileConfiguration,
+            CovariationFileConfiguration fileConfiguration,
             @Value("#{stepExecutionContext[startLine]}") int startLine,
             @Value("#{stepExecutionContext[partitionSize]}") int partitionSize,
             @Value("#{stepExecutionContext[partitionIndex]}") int partitionIndex) {
@@ -69,14 +68,14 @@ public class ProteinCovariationConfig {
     }
 
     @Bean
-    public ProteinCovariationPairBatchReader proteinCovariationPairBatchReader(FileConfiguration fileConfiguration) {
+    public ProteinCovariationPairBatchReader proteinCovariationPairBatchReader(CovariationFileConfiguration fileConfiguration) {
         return new ProteinCovariationPairBatchReader(fileConfiguration);
     }
 
     @Bean
     @StepScope
     public ProteinCovariationPartitionProcessor proteinCovariationPartitionProcessor(
-            FileConfiguration fileConfiguration,
+            CovariationFileConfiguration fileConfiguration,
             @Value("#{stepExecutionContext[partitionIndex]}") int partitionIndex) {
 
         return ProteinCovariationPartitionProcessor.builder()
@@ -88,7 +87,7 @@ public class ProteinCovariationConfig {
     @Bean
     @StepScope
     public ProteinCovariationPartitionWriter proteinCovariationPartitionWriter(
-            FileConfiguration fileConfiguration,
+            CovariationFileConfiguration fileConfiguration,
             @Value("#{stepExecutionContext[partitionIndex]}") int partitionIndex) {
 
         return ProteinCovariationPartitionWriter.builder()
@@ -101,7 +100,7 @@ public class ProteinCovariationConfig {
     public ProteinCovariationPairBatchWriter proteinCovariationPairBatchWriter(
             IntactDao intactDao,
             AppProperties appProperties,
-            FileConfiguration fileConfiguration,
+            CovariationFileConfiguration fileConfiguration,
             ProteinPairCovariationService proteinPairCovariationService) {
 
         return ProteinCovariationPairBatchWriter.builder()
@@ -116,7 +115,7 @@ public class ProteinCovariationConfig {
     public ProteinCovariationPreProcessTasklet proteinCovariationPreProcessTasklet(
             ComplexService complexService,
             UniProtMappingService uniProtMappingService,
-            FileConfiguration fileConfiguration) {
+            CovariationFileConfiguration fileConfiguration) {
 
         return new ProteinCovariationPreProcessTasklet(
                 complexService,

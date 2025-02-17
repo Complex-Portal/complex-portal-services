@@ -14,7 +14,7 @@ import psidev.psi.mi.jami.model.Interactor;
 import psidev.psi.mi.jami.model.InteractorPool;
 import psidev.psi.mi.jami.model.Participant;
 import psidev.psi.mi.jami.model.Xref;
-import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
+import uk.ac.ebi.complex.service.covariation.config.CovariationFileConfiguration;
 import uk.ac.ebi.complex.service.covariation.logging.ProteinFailedWriter;
 import uk.ac.ebi.complex.service.batch.model.UniprotProtein;
 import uk.ac.ebi.complex.service.covariation.reader.ProteinIdsReader;
@@ -45,7 +45,7 @@ public class ProteinCovariationPreProcessTasklet implements Tasklet {
     private final ComplexService complexService;
     private final UniProtMappingService uniProtMappingService;
     private final ProteinIdsReader proteinIdsReader;
-    private final FileConfiguration fileConfiguration;
+    private final CovariationFileConfiguration fileConfiguration;
 
     private ProteinFailedWriter ignoredReportWriter;
 
