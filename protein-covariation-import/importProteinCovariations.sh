@@ -11,18 +11,19 @@
 #SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
-#if [ $# -ne 5 ]; then
-#      echo ""
-#      echo "ERROR: wrong number of parameters ($#)."
-#      echo "usage: $0 INPUT_FILE OUTPUT_FILE_NAME REPORT_DIR SEPARATOR[',', '\t'] HEADER[true, false]"
-#      echo ""
-#      exit 1
-#fi
+if [ $# -ne 4 ]; then
+      echo ""
+      echo "ERROR: wrong number of parameters ($#)."
+      echo "usage: $0 INPUT_FILE OUTPUT_DIRECTORY SEPARATOR[',', '\t'] HEADER[true, false]"
+      echo ""
+      exit 1
+fi
 
-INPUT_FILE=/nfs/production/hhe/intact/data/protein-covariation-files/partition_output
-OUTPUT_FILE_NAME=output_temp
-REPORT_DIR=/nfs/production/hhe/intact/data/protein-covariation-files
-SEPARATOR=,
-HEADER=true
+INPUT_FILE=$1
+OUTPUT_DIR_NAME=$1
+OUTPUT_DIRECTORY=$2
+SEPARATOR=$3
+HEADER=$4
 
-mvn clean -U install -P run-protein-covariation-job -Djob.name=importProteinCovariationsJob -Dinput.file.name=$INPUT_FILE -Doutput.file.name=$OUTPUT_FILE_NAME -Doutput.directory=$REPORT_DIR -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
+mvn clean -U install -P run-protein-covariation-job -Djob.name=importProteinCovariationsJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
+
