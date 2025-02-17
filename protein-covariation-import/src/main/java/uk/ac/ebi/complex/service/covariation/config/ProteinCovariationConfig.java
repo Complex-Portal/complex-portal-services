@@ -231,7 +231,7 @@ public class ProteinCovariationConfig {
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
                 .start(preProcessCovariationFile)
-                .start(processProteinCovariationFilePartitionStep)
+                .next(processProteinCovariationFilePartitionStep)
                 .build();
     }
 
@@ -260,8 +260,8 @@ public class ProteinCovariationConfig {
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
                 .start(preProcessCovariationFile)
-                .start(processProteinCovariationFilePartitionStep)
-                .start(importProteinCovariationsStep)
+                .next(processProteinCovariationFilePartitionStep)
+                .next(importProteinCovariationsStep)
                 .build();
     }
 
