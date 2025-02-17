@@ -36,7 +36,7 @@ public class ProteinCovariationPartitioner implements Partitioner {
         }
 
         int partitionIndex = 0;
-        int partitionSize = (int) (numberOfLines / gridSize);
+        int partitionSize = Math.max(10, (int) (numberOfLines / gridSize));
         int startLine = 0;
 
         while (startLine <= numberOfLines) {

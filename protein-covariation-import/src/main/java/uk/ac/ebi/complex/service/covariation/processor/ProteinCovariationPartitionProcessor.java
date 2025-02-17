@@ -157,19 +157,30 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
             Set<String> proteinAcsA = proteinsInIntact.get(proteinA);
             if (proteinsInIntact.containsKey(proteinB)) {
                 Set<String> proteinAcsB = proteinsInIntact.get(proteinB);
-                for (String complexId : complexesInIntact.keySet()) {
-                    Set<String> participants = complexesInIntact.get(complexId);
-                    for (String participantA : participants) {
-                        if (proteinAcsA.contains(participantA)) {
-                            for (String participantB : participants) {
-                                if (proteinAcsB.contains(participantB)) {
-                                    pairs.add(new ProteinPairCovariation(participantA, participantB, probability));
-                                }
-                            }
+                if (isProteinPairPartOfComplex(proteinAcsA, proteinAcsB)) {
+                    for (String proteinAcA : proteinAcsA) {
+                        for (String proteinAcB : proteinAcsB) {
+                            pairs.add(new ProteinPairCovariation(proteinAcA, proteinAcB, probability));
                         }
                     }
                 }
             }
         }
+    }
+
+    private boolean isProteinPairPartOfComplex(Set<String> proteinAcsA, Set<String> proteinAcsB) {
+        for (String complexId : complexesInIntact.keySet()) {
+            Set<String> participants = complexesInIntact.get(complexId);
+            for (String participantA : participants) {
+                if (proteinAcsA.contains(participantA)) {
+                    for (String participantB : participants) {
+                        if (proteinAcsB.contains(participantB)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 }
