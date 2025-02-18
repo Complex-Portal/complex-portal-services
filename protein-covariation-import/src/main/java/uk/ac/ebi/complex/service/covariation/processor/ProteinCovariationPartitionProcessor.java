@@ -17,10 +17,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Log4j
 @SuperBuilder
@@ -116,56 +119,50 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
     }
 
     protected List<ProteinPairCovariation> expandProteinCovariation(ProteinCovariation proteinCovariation) {
-        List<ProteinPairCovariation> pairs = new ArrayList<>();
-
+        Set<String> proteinsA = new HashSet<>(proteinCovariation.getProteinA());
         for (String proteinA : proteinCovariation.getProteinA()) {
-            pairs.addAll(expandProteinCovariationB(proteinCovariation, proteinA));
             if (uniprotProteinMapping.containsKey(proteinA)) {
-                String newProteinA = uniprotProteinMapping.get(proteinA);
-                if (!proteinCovariation.getProteinA().contains(newProteinA)) {
-                    pairs.addAll(expandProteinCovariationB(proteinCovariation, newProteinA));
-                }
+                proteinsA.add(uniprotProteinMapping.get(proteinA));
             }
         }
 
-        return pairs;
-    }
-
-    protected List<ProteinPairCovariation> expandProteinCovariationB(ProteinCovariation proteinCovariation, String proteinA) {
-        List<ProteinPairCovariation> pairs = new ArrayList<>();
-
+        Set<String> proteinsB = new HashSet<>(proteinCovariation.getProteinB());
         for (String proteinB : proteinCovariation.getProteinB()) {
-            addCovariationIfProteinsPartOfComplex(pairs, proteinA, proteinB, proteinCovariation.getProbability());
             if (uniprotProteinMapping.containsKey(proteinB)) {
-                String newProteinB = uniprotProteinMapping.get(proteinB);
-                if (!proteinCovariation.getProteinB().contains(newProteinB)) {
-                    addCovariationIfProteinsPartOfComplex(pairs, proteinA, newProteinB, proteinCovariation.getProbability());
-                }
+                proteinsB.add(uniprotProteinMapping.get(proteinB));
             }
         }
 
-        return pairs;
+        return addCovariationIfProteinsPartOfComplex(proteinsA, proteinsB, proteinCovariation.getProbability());
     }
 
-    private void addCovariationIfProteinsPartOfComplex(
-            List<ProteinPairCovariation> pairs,
-            String proteinA,
-            String proteinB,
+    private List<ProteinPairCovariation> addCovariationIfProteinsPartOfComplex(
+            Collection<String> proteinsA,
+            Collection<String> proteinsB,
             Double probability) {
 
-        if (proteinsInIntact.containsKey(proteinA)) {
-            Set<String> proteinAcsA = proteinsInIntact.get(proteinA);
-            if (proteinsInIntact.containsKey(proteinB)) {
-                Set<String> proteinAcsB = proteinsInIntact.get(proteinB);
-                if (isProteinPairPartOfComplex(proteinAcsA, proteinAcsB)) {
-                    for (String proteinAcA : proteinAcsA) {
-                        for (String proteinAcB : proteinAcsB) {
-                            pairs.add(new ProteinPairCovariation(proteinAcA, proteinAcB, probability));
-                        }
-                    }
+        List<ProteinPairCovariation> pairs = new ArrayList<>();
+
+        Set<String> proteinAcsA = proteinsA.stream()
+                .filter(proteinsInIntact::containsKey)
+                .map(proteinsInIntact::get)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+        Set<String> proteinAcsB = proteinsB.stream()
+                .filter(proteinsInIntact::containsKey)
+                .map(proteinsInIntact::get)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+
+        if (isProteinPairPartOfComplex(proteinAcsA, proteinAcsB)) {
+            for (String proteinAcA : proteinAcsA) {
+                for (String proteinAcB : proteinAcsB) {
+                    pairs.add(new ProteinPairCovariation(proteinAcA, proteinAcB, probability));
                 }
             }
         }
+
+        return pairs;
     }
 
     private boolean isProteinPairPartOfComplex(Set<String> proteinAcsA, Set<String> proteinAcsB) {
