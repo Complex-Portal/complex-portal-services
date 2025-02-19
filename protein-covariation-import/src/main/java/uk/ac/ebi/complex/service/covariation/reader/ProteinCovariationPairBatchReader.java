@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -49,7 +50,7 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
 
-        File inputDirectory = new File(fileConfiguration.getInputFileName());
+        File inputDirectory = Paths.get(fileConfiguration.getReportDirectory(), fileConfiguration.getProcessOutputDirName()).toFile();
         fileIterator = FileUtils.iterateFiles(inputDirectory, null, false);
         if (fileIterator.hasNext()) {
             loadNextFile();
