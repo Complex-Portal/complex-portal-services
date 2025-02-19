@@ -14,14 +14,14 @@
 if [ $# -ne 4 ]; then
       echo ""
       echo "ERROR: wrong number of parameters ($#)."
-      echo "usage: $0 INPUT_FILE OUTPUT_DIRECTORY SEPARATOR[',', '\t'] HEADER[true, false]"
+      echo "usage: $0 OUTPUT_DIRECTORY OUTPUT_DIR_NAME SEPARATOR[',', '\t'] HEADER[true, false]"
       echo ""
       exit 1
 fi
 
-INPUT_FILE=$1
-OUTPUT_DIR_NAME=$1
-OUTPUT_DIRECTORY=$2
+INPUT_FILE=ignored
+OUTPUT_DIRECTORY=$1
+OUTPUT_DIR_NAME=$2
 SEPARATOR=$3
 HEADER=$4
 
