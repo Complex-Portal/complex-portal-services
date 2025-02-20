@@ -32,7 +32,6 @@
         <module>music-import</module>
         <module>pdb-import</module>
         <module>protein-covariation-import</module>
-        <module>protein-covariation</module>
     </modules>
 
     <scm>
