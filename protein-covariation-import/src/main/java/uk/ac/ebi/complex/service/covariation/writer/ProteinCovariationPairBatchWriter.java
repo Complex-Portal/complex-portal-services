@@ -4,15 +4,15 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
-import psidev.psi.mi.jami.model.Source;
+import psidev.psi.mi.jami.model.CvTerm;
 import uk.ac.ebi.complex.service.batch.exception.SourceNotFoundException;
 import uk.ac.ebi.complex.service.batch.writer.AbstractBatchWriter;
 import uk.ac.ebi.complex.service.covariation.model.ProteinPairCovariation;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
+import uk.ac.ebi.intact.jami.model.extension.IntactCvTerm;
 import uk.ac.ebi.intact.jami.model.extension.IntactProteinPairCovariation;
-import uk.ac.ebi.intact.jami.model.extension.IntactSource;
+import uk.ac.ebi.intact.jami.utils.IntactUtils;
 
-import javax.persistence.Query;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -25,16 +25,16 @@ import java.util.stream.Stream;
 public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<ProteinPairCovariation>, IntactProteinPairCovariation> {
 
     private final IntactDao intactDao;
-    private final String sourceId;
+    private final String databaseId;
 
-    private Source source;
+    private CvTerm database;
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         super.open(executionContext);
 
         try {
-            source = findSource();
+            database = findDatabase();
         } catch (SourceNotFoundException e) {
             throw new ItemStreamException(e);
         }
@@ -42,7 +42,7 @@ public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<
 
     @Override
     public void write(List<? extends List<ProteinPairCovariation>> items) throws Exception {
-        List<IntactProteinPairCovariation> existingProteinPairCovariations = getProteinCovariations(items);
+        Collection<IntactProteinPairCovariation> existingProteinPairCovariations = getProteinCovariations(items);
 
         List<IntactProteinPairCovariation> newCovariationsToSave = new ArrayList<>();
         List<IntactProteinPairCovariation> covariationsToUpdate = new ArrayList<>();
@@ -56,7 +56,7 @@ public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<
                             proteinCovariation.getProteinA(),
                             proteinCovariation.getProteinB(),
                             proteinCovariation.getProbability(),
-                            source));
+                            database));
                 } else if (!intactProteinPairCovariation.getProbability().equals(proteinCovariation.getProbability())) {
                     intactProteinPairCovariation.setProbability(proteinCovariation.getProbability());
                     covariationsToUpdate.add(intactProteinPairCovariation);
@@ -74,25 +74,17 @@ public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<
         }
     }
 
-    private List<IntactProteinPairCovariation> getProteinCovariations(List<? extends List<ProteinPairCovariation>> proteinCovariations) {
+    private Collection<IntactProteinPairCovariation> getProteinCovariations(List<? extends List<ProteinPairCovariation>> proteinCovariations) {
         Set<String> proteinIds = proteinCovariations.stream()
                 .flatMap(Collection::stream)
                 .flatMap(covariation -> Stream.of(covariation.getProteinA(), covariation.getProteinB()))
                 .collect(Collectors.toSet());
 
-        Query query = intactDao.getEntityManager().createQuery(
-                "select c " +
-                        "from IntactProteinPairCovariation c " +
-                        "where (c.proteinA in (:proteins) or c.proteinB in (:proteins)) " +
-                        "and c.source = :sourceName");
-        query.setParameter("proteins", proteinIds);
-        query.setParameter("sourceName", source.getShortName());
-
-        return query.getResultList();
+        return intactDao.getIntactProteinPairCovariationDao().getAllForProteinIdsAndDatabase(proteinIds, databaseId);
     }
 
     private IntactProteinPairCovariation getProteinCovariationIfExists(
-            List<IntactProteinPairCovariation> intactProteinCovariations,
+            Collection<IntactProteinPairCovariation> intactProteinCovariations,
             ProteinPairCovariation proteinCovariation) {
 
         for (IntactProteinPairCovariation intactProteinPairCovariation : intactProteinCovariations) {
@@ -109,20 +101,11 @@ public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<
         return null;
     }
 
-    private IntactSource findSource() throws SourceNotFoundException {
-        IntactSource source = intactDao.getSourceDao().getByMIIdentifier(sourceId);
-        if (source != null) {
-            return source;
+    private IntactCvTerm findDatabase() throws SourceNotFoundException {
+        IntactCvTerm databaseTerm = intactDao.getCvTermDao().getByMIIdentifier(databaseId, IntactUtils.DATABASE_OBJCLASS);
+        if (databaseTerm != null) {
+            return databaseTerm;
         }
-        Collection<IntactSource> sourcesByXref = intactDao.getSourceDao().getByXref(sourceId);
-        if (sourcesByXref != null && !sourcesByXref.isEmpty()) {
-            List<IntactSource> sourcesWithIdentifier = sourcesByXref.stream()
-                    .filter(sourceByXref -> sourceByXref.getIdentifiers().stream().anyMatch(xrefId -> sourceId.equals(xrefId.getId())))
-                    .collect(Collectors.toList());
-            if (sourcesWithIdentifier.size() == 1) {
-                return sourcesWithIdentifier.get(0);
-            }
-        }
-        throw new SourceNotFoundException("Source not found with id '" + sourceId + "'");
+        throw new SourceNotFoundException("Database not found with id '" + databaseId + "'");
     }
 }

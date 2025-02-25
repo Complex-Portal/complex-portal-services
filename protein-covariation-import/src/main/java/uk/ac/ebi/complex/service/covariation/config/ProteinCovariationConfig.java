@@ -102,14 +102,14 @@ public class ProteinCovariationConfig {
             AppProperties appProperties,
             CovariationFileConfiguration fileConfiguration,
             ProteinPairCovariationService proteinPairCovariationService,
-            @Value("${source.id}") String sourceId) {
+            @Value("${database.id}") String databaseId) {
 
         return ProteinCovariationPairBatchWriter.builder()
                 .appProperties(appProperties)
                 .fileConfiguration(fileConfiguration)
                 .intactService(proteinPairCovariationService)
                 .intactDao(intactDao)
-                .sourceId(sourceId)
+                .databaseId(databaseId)
                 .build();
     }
 
