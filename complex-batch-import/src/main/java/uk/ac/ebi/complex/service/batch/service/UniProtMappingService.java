@@ -138,8 +138,10 @@ public class UniProtMappingService {
                         do {
                             Thread.sleep(1000);
                             status = pollStatus(jobId);
+                            log.info("Job '" + jobId + "' with status '" + status + "'");
                             counter++;
                         } while (!status.equals(UniProt.IdMapping.Poll.Result.Status.FINISHED) || counter == 3600); // Limit to 1 hour
+                        log.info("Fetching results for job '" + jobId + "'");
                         fetchResult(jobId).forEach((key, value) -> result.merge(key, value, (v1, v2) -> {
                             v1.addAll(v2);
                             return v1;
