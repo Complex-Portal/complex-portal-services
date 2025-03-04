@@ -145,8 +145,8 @@ public class ComplexXrefDeleteProcessor<T, R extends ComplexToImport<T>> extends
 
         csvReader.forEach(csvLine -> {
             String id = csvLine[0];
-            String[] complexIds = csvLine[3].split(" ");
-            String qualifier = csvLine[4];
+            String[] complexIds = csvLine[2].split(" ");
+            String qualifier = csvLine[3];
             for (String complexId : complexIds) {
                 if (Xref.IDENTITY.equals(qualifier)) {
                     complexesByIdentityXrefs.putIfAbsent(id, new HashSet<>());

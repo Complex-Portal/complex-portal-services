@@ -8,6 +8,7 @@ import psidev.psi.mi.jami.bridges.exception.BridgeFailedException;
 import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
 import psidev.psi.mi.jami.model.Alias;
 import psidev.psi.mi.jami.model.Annotation;
+import psidev.psi.mi.jami.model.CvTerm;
 import psidev.psi.mi.jami.model.Entity;
 import psidev.psi.mi.jami.model.Protein;
 import psidev.psi.mi.jami.model.Xref;
@@ -160,8 +161,8 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     private Collection<Xref> getXrefs(Collection<Xref> xrefs, String databaseMi, String qualifierMi) {
         return xrefs
                 .stream()
-                .filter(id -> id.getDatabase() != null && databaseMi.equals(id.getDatabase().getMIIdentifier()))
-                .filter(id -> id.getQualifier() != null && qualifierMi.equals(id.getQualifier().getMIIdentifier()))
+                .filter(id -> isCvTermWithId(id.getDatabase(), databaseMi))
+                .filter(id -> isCvTermWithId(id.getQualifier(), qualifierMi))
                 .collect(Collectors.toList());
     }
 
@@ -176,7 +177,7 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     protected Collection<Annotation> getAuthorConfidenceAnnotations(IntactComplex existingComplex) {
         return existingComplex.getAnnotations()
                 .stream()
-                .filter(ann -> AUTHOR_CONFIDENCE_TOPIC_ID.equals(ann.getTopic().getMIIdentifier()))
+                .filter(ann -> isCvTermWithId(ann.getTopic(), AUTHOR_CONFIDENCE_TOPIC_ID))
                 .collect(Collectors.toList());
     }
 
@@ -260,7 +261,7 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
                 .map(Entity::getInteractor)
                 .map(interactor -> interactor.getAliases()
                         .stream()
-                        .filter(alias -> GENE_NAME_MI.equals(alias.getType().getMIIdentifier()))
+                        .filter(alias -> isCvTermWithId(alias.getType(), GENE_NAME_MI))
                         .map(Alias::getName)
                         .findFirst())
                 .filter(Optional::isPresent)
@@ -344,5 +345,17 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
             return organism;
         }
         throw new OrganismNotFoundException("Organism not found with tax id '" + taxId + "'");
+    }
+
+    private boolean isCvTermWithId(CvTerm cvTerm, String id) {
+        if (cvTerm == null) {
+            return false;
+        }
+        if (cvTerm.getMIIdentifier() != null) {
+            if (cvTerm.getMIIdentifier().equals(id)) {
+                return true;
+            }
+        }
+        return cvTerm.getIdentifiers().stream().anyMatch(xref -> xref.getId().equals(id));
     }
 }

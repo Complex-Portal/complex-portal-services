@@ -34,7 +34,7 @@ public class MusicComplexManager extends ComplexManager<Double, MusicComplexToIm
     private static final String AUTHOR_CONFIDENCE_TOPIC_ID = "MI:0621";
     private static final String ML_ECO_CODE = "ECO:0008004";
     private static final String CLO_DATABASE_ID = "MI:2415";
-    private static final String MUSIC_DATABASE_ID = "IA:3605";
+    public static final String MUSIC_DATABASE_ID = "IA:3605";
     private static final String MUSIC_INSTITUION_ID = "IA:3605";
 
     private final MusicImportAppProperties musicImportAppProperties;

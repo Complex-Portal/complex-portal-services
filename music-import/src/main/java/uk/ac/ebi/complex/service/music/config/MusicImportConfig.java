@@ -19,6 +19,10 @@ import psidev.psi.mi.jami.batch.SimpleJobListener;
 import psidev.psi.mi.jami.bridges.uniprot.UniprotProteinFetcher;
 import uk.ac.ebi.complex.service.batch.config.AppProperties;
 import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
+import uk.ac.ebi.complex.service.batch.model.ComplexWithXrefsToDelete;
+import uk.ac.ebi.complex.service.batch.processor.ComplexXrefDeleteProcessor;
+import uk.ac.ebi.complex.service.batch.reader.ComplexIteratorBatchReader;
+import uk.ac.ebi.complex.service.batch.writer.ComplexXrefDeleteWriter;
 import uk.ac.ebi.complex.service.finder.ComplexFinder;
 import uk.ac.ebi.complex.service.music.manager.MusicComplexManager;
 import uk.ac.ebi.complex.service.batch.model.ComplexWithMatches;
@@ -30,6 +34,7 @@ import uk.ac.ebi.complex.service.music.reader.MusicComplexReader;
 import uk.ac.ebi.complex.service.batch.writer.ComplexImportBatchWriter;
 import uk.ac.ebi.complex.service.music.writer.MusicComplexWriter;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
+import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.service.ComplexService;
 
 @Configuration
@@ -127,6 +132,36 @@ public class MusicImportConfig {
     }
 
     @Bean
+    public ComplexIteratorBatchReader complexIteratorBatchReader(ComplexService complexService) {
+        return new ComplexIteratorBatchReader(complexService);
+    }
+
+    @Bean
+    public ComplexXrefDeleteProcessor<Double, MusicComplexToImport> complexXrefDeleteProcessor(
+            MusicComplexManager musicComplexManager,
+            IntactDao intactDao,
+            FileConfiguration fileConfiguration) {
+
+        return ComplexXrefDeleteProcessor.<Double, MusicComplexToImport>builder()
+                .complexManager(musicComplexManager)
+                .intactDao(intactDao)
+                .fileConfiguration(fileConfiguration)
+                .databaseId(MusicComplexManager.MUSIC_DATABASE_ID)
+                .build();
+    }
+
+    @Bean
+    public ComplexXrefDeleteWriter complexXrefDeleteWriter(
+            ComplexService complexService,
+            FileConfiguration fileConfiguration) {
+
+        return ComplexXrefDeleteWriter.builder()
+                .intactService(complexService)
+                .fileConfiguration(fileConfiguration)
+                .build();
+    }
+
+    @Bean
     public Step musicComplexesImportStep(
             PlatformTransactionManager jamiTransactionManager,
             JobRepositoryFactoryBean basicBatchJobRepository,
@@ -166,17 +201,47 @@ public class MusicImportConfig {
     }
 
     @Bean
+    public Step deleteOldXrefsStep(
+            PlatformTransactionManager jamiTransactionManager,
+            JobRepositoryFactoryBean basicBatchJobRepository,
+            BasicChunkLoggerListener basicChunkLoggerListener,
+            ComplexIteratorBatchReader complexIteratorBatchReader,
+            ComplexXrefDeleteProcessor<Double, MusicComplexToImport> complexXrefDeleteProcessor,
+            ComplexXrefDeleteWriter complexXrefDeleteWriter) throws Exception {
+
+        StepBuilder basicStep = basicStepBuilder(
+                "deleteOldXrefsStep",
+                jamiTransactionManager,
+                basicBatchJobRepository);
+
+        return new SimpleStepBuilder<IntactComplex, ComplexWithXrefsToDelete>(basicStep)
+                .chunk(50)
+                .reader(complexIteratorBatchReader)
+                .processor(complexXrefDeleteProcessor)
+                .writer(complexXrefDeleteWriter)
+                .faultTolerant()
+                .retryLimit(10)
+                .retry(org.springframework.batch.item.ItemStreamException.class)
+                .retry(javax.net.ssl.SSLHandshakeException.class)
+                .listener((StepExecutionListener) basicChunkLoggerListener)
+                .listener((ChunkListener) basicChunkLoggerListener)
+                .build();
+    }
+
+    @Bean
     public Job musicComplexesImport(
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
             @Qualifier("processMusicFile") Step processMusicFile,
-            @Qualifier("musicComplexesImportStep") Step importStep) throws Exception {
+            @Qualifier("musicComplexesImportStep") Step importStep,
+            @Qualifier("deleteOldXrefsStep") Step deleteOldXrefsStep) throws Exception {
 
         return new JobBuilder("musicComplexesImport")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
                 .start(processMusicFile)
                 .next(importStep)
+                .next(deleteOldXrefsStep)
                 .build();
     }
 
