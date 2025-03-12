@@ -11,19 +11,20 @@
 #SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
-if [ $# -ne 6 ]; then
+if [ $# -ne 7 ]; then
       echo ""
       echo "ERROR: wrong number of parameters ($#)."
-      echo "usage: $0 PROFILE INPUT_FILE OUTPUT_DIRECTORY OUTPUT_DIR_NAME SEPARATOR[',', '\t'] HEADER[true, false]"
+      echo "usage: $0 PROFILE USER_ID INPUT_FILE OUTPUT_DIRECTORY OUTPUT_DIR_NAME SEPARATOR[',', '\t'] HEADER[true, false]"
       echo ""
       exit 1
 fi
 
 PROFILE=$1
-INPUT_FILE=$2
-OUTPUT_DIRECTORY=$3
-OUTPUT_DIR_NAME=$4
-SEPARATOR=$5
-HEADER=$6
+USER_ID=$2
+INPUT_FILE=$3
+OUTPUT_DIRECTORY=$4
+OUTPUT_DIR_NAME=$5
+SEPARATOR=$6
+HEADER=$7
 
-mvn clean -U install -P run-protein-covariation-job,${PROFILE} -Djob.name=processProteinCovariationFileJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
+mvn clean -U install -P run-protein-covariation-job,${PROFILE} -Djob.name=processProteinCovariationFileJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -Djami.user.context.id=${USER_ID} -DskipTests
