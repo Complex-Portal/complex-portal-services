@@ -11,20 +11,21 @@
 #SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
-if [ $# -ne 5 ]; then
+if [ $# -ne 6 ]; then
       echo ""
       echo "ERROR: wrong number of parameters ($#)."
-      echo "usage: $0 OUTPUT_DIRECTORY OUTPUT_DIR_NAME DATABASE_ID SEPARATOR[',', '\t'] HEADER[true, false]"
+      echo "usage: $0 PROFILE OUTPUT_DIRECTORY OUTPUT_DIR_NAME DATABASE_ID SEPARATOR[',', '\t'] HEADER[true, false]"
       echo ""
       exit 1
 fi
 
+PROFILE=$1
 INPUT_FILE=ignored
-OUTPUT_DIRECTORY=$1
-OUTPUT_DIR_NAME=$2
-DATABASE_ID=$3
-SEPARATOR=$4
-HEADER=$5
+OUTPUT_DIRECTORY=$2
+OUTPUT_DIR_NAME=$3
+DATABASE_ID=$4
+SEPARATOR=$5
+HEADER=$6
 
 mvn clean -U install -P run-protein-covariation-job -Djob.name=importProteinCovariationsJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Ddatabase.id=$DATABASE_ID -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
 
