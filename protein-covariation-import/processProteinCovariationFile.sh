@@ -26,4 +26,4 @@ OUTPUT_DIR_NAME=$4
 SEPARATOR=$5
 HEADER=$6
 
-mvn clean -U install -P run-protein-covariation-job -Djob.name=processProteinCovariationFileJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
+mvn clean -U install -P run-protein-covariation-job,${PROFILE} -Djob.name=processProteinCovariationFileJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
