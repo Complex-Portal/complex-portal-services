@@ -50,14 +50,16 @@ public class PdbAssembliesFileReader {
         String uniProtIdRegex = getUniprotRegex();
         Set<AssemblyEntry> assemblyEntries = new HashSet<>();
         csvReader.forEach(csvLine -> {
-            List<String> complexIds = StringUtils.isEmpty(csvLine[4]) ? List.of() : List.of(csvLine[4]);
-            List<String> assemblies = List.of(csvLine[7].split("_")[0]);
-            Set<String> proteinIds = getProteinIds(uniProtIdRegex, csvLine[1].split(","));
-            assemblyEntries.add(AssemblyEntry.builder()
-                    .assemblies(assemblies)
-                    .complexIds(complexIds)
-                    .proteins(proteinIds.stream().map(proteinId -> UniprotProtein.builder().proteinAc(proteinId).build()).collect(Collectors.toSet()))
-                    .build());
+            if (csvLine.length > 1 || (csvLine.length == 1 && !csvLine[0].isEmpty())) {
+                List<String> complexIds = StringUtils.isEmpty(csvLine[4]) ? List.of() : List.of(csvLine[4]);
+                List<String> assemblies = List.of(csvLine[7].split("_")[0]);
+                Set<String> proteinIds = getProteinIds(uniProtIdRegex, csvLine[1].split(","));
+                assemblyEntries.add(AssemblyEntry.builder()
+                        .assemblies(assemblies)
+                        .complexIds(complexIds)
+                        .proteins(proteinIds.stream().map(proteinId -> UniprotProtein.builder().proteinAc(proteinId).build()).collect(Collectors.toSet()))
+                        .build());
+            }
         });
         csvReader.close();
 

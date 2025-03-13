@@ -36,10 +36,12 @@ public class ProteinIdsReader {
 
         Map<String, List<String>> proteinIds = new HashMap<>();
         for (String[] csvLine : csvReader) {
-            proteinIdsFromStringArray(proteinIds, csvLine);
-            count++;
-            if (count % 2_500_000 == 0) {
-                log.info("Read " + count + " proteinIds");
+            if (csvLine.length > 1 || (csvLine.length == 1 && !csvLine[0].isEmpty())) {
+                proteinIdsFromStringArray(proteinIds, csvLine);
+                count++;
+                if (count % 2_500_000 == 0) {
+                    log.info("Read " + count + " proteinIds");
+                }
             }
         }
         csvReader.close();

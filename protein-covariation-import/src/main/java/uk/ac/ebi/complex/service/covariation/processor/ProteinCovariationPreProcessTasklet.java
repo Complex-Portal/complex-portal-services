@@ -75,31 +75,30 @@ public class ProteinCovariationPreProcessTasklet implements Tasklet {
             for (Participant participant : complex.getParticipants()) {
                 if (participant.getInteractor() != null) {
                     IntactInteractor interactor = (IntactInteractor) participant.getInteractor();
-                    Set<String> interactorIds = new HashSet<>();
                     if (interactor instanceof IntactInteractorPool) {
                         InteractorPool interactorPool = (InteractorPool) interactor;
                         for (Interactor subInteractor : interactorPool) {
                             if (subInteractor instanceof IntactProtein) {
-                                if (subInteractor.getPreferredIdentifier() != null) {
-                                    Xref xref = subInteractor.getPreferredIdentifier();
+                                IntactProtein protein = (IntactProtein) subInteractor;
+                                participantAcs.add(protein.getAc());
+                                if (protein.getPreferredIdentifier() != null) {
+                                    Xref xref = protein.getPreferredIdentifier();
                                     if (xref.getId() != null && !xref.getId().isEmpty()) {
-                                        interactorIds.add(xref.getId());
+                                        proteinsInIntact.putIfAbsent(xref.getId(), new HashSet<>());
+                                        proteinsInIntact.get(xref.getId()).add(protein.getAc());
                                     }
                                 }
                             }
                         }
                     }
-                    if (interactor instanceof IntactProtein || interactor instanceof IntactInteractorPool) {
+                    if (interactor instanceof IntactProtein) {
                         participantAcs.add(interactor.getAc());
                         if (interactor.getPreferredIdentifier() != null) {
                             Xref xref = interactor.getPreferredIdentifier();
                             if (xref.getId() != null && !xref.getId().isEmpty()) {
-                                interactorIds.add(xref.getId());
+                                proteinsInIntact.putIfAbsent(xref.getId(), new HashSet<>());
+                                proteinsInIntact.get(xref.getId()).add(interactor.getAc());
                             }
-                        }
-                        for (String interactorId : interactorIds) {
-                            proteinsInIntact.putIfAbsent(interactorId, new HashSet<>());
-                            proteinsInIntact.get(interactorId).add(interactor.getAc());
                         }
                     }
                 }

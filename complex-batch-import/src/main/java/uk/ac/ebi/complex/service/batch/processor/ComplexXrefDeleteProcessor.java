@@ -144,19 +144,21 @@ public class ComplexXrefDeleteProcessor<T, R extends ComplexToImport<T>> extends
         }
 
         csvReader.forEach(csvLine -> {
-            String id = csvLine[0];
-            String[] complexIds = csvLine[2].split(" ");
-            String qualifier = csvLine[3];
-            for (String complexId : complexIds) {
-                if (Xref.IDENTITY.equals(qualifier)) {
-                    complexesByIdentityXrefs.putIfAbsent(id, new HashSet<>());
-                    complexesByIdentityXrefs.get(id).add(complexId);
-                } else if (ComplexManager.SUBSET_QUALIFIER.equals(qualifier)) {
-                    complexesBySubsetXrefs.putIfAbsent(id, new HashSet<>());
-                    complexesBySubsetXrefs.get(id).add(complexId);
-                } else if (ComplexManager.COMPLEX_CLUSTER_QUALIFIER.equals(qualifier)) {
-                    complexesByComplexClusterXrefs.putIfAbsent(id, new HashSet<>());
-                    complexesByComplexClusterXrefs.get(id).add(complexId);
+            if (csvLine.length > 1 || (csvLine.length == 1 && !csvLine[0].isEmpty())) {
+                String id = csvLine[0];
+                String[] complexIds = csvLine[2].split(" ");
+                String qualifier = csvLine[3];
+                for (String complexId : complexIds) {
+                    if (Xref.IDENTITY.equals(qualifier)) {
+                        complexesByIdentityXrefs.putIfAbsent(id, new HashSet<>());
+                        complexesByIdentityXrefs.get(id).add(complexId);
+                    } else if (ComplexManager.SUBSET_QUALIFIER.equals(qualifier)) {
+                        complexesBySubsetXrefs.putIfAbsent(id, new HashSet<>());
+                        complexesBySubsetXrefs.get(id).add(complexId);
+                    } else if (ComplexManager.COMPLEX_CLUSTER_QUALIFIER.equals(qualifier)) {
+                        complexesByComplexClusterXrefs.putIfAbsent(id, new HashSet<>());
+                        complexesByComplexClusterXrefs.get(id).add(complexId);
+                    }
                 }
             }
         });

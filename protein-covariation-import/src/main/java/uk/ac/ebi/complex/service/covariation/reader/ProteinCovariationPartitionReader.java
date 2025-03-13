@@ -38,8 +38,10 @@ public class ProteinCovariationPartitionReader implements ItemReader<ProteinCova
     public ProteinCovariation read() {
         if (csvIterator.hasNext() && linesRead < partitionSize) {
             String[] csvLine = csvIterator.next();
-            linesRead++;
-            return proteinCovariationFromStringArray(csvLine);
+            if (csvLine.length > 1 || (csvLine.length == 1 && !csvLine[0].isEmpty())) {
+                linesRead++;
+                return proteinCovariationFromStringArray(csvLine);
+            }
         }
         return null;
     }

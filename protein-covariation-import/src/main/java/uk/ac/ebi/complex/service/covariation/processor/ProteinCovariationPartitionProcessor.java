@@ -66,7 +66,9 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
                 csvReader.skip(1);
             }
             for (String[] row : csvReader) {
-                complexesInIntact.put(row[0], Set.of(row[1].split(";")));
+                if (row.length > 1 || (row.length == 1 && !row[0].isEmpty())) {
+                    complexesInIntact.put(row[0], Set.of(row[1].split(";")));
+                }
             }
             csvReader.close();
         } catch (IOException e) {
@@ -86,7 +88,9 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
                 csvReader.skip(1);
             }
             for (String[] row : csvReader) {
-                proteinsInIntact.put(row[0], Set.of(row[1].split(";")));
+                if (row.length > 1 || (row.length == 1 && !row[0].isEmpty())) {
+                    proteinsInIntact.put(row[0], Set.of(row[1].split(";")));
+                }
             }
             csvReader.close();
         } catch (IOException e) {
@@ -106,7 +110,9 @@ public class ProteinCovariationPartitionProcessor extends AbstractBatchProcessor
                 csvReader.skip(1);
             }
             for (String[] row : csvReader) {
-                uniprotProteinMapping.put(row[0], row[1]);
+                if (row.length > 1 || (row.length == 1 && !row[0].isEmpty())) {
+                    uniprotProteinMapping.put(row[0], row[1]);
+                }
             }
             csvReader.close();
         } catch (IOException e) {

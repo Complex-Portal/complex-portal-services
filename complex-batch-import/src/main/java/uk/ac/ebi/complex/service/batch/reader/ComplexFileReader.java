@@ -34,7 +34,11 @@ public abstract class ComplexFileReader<T, R extends ComplexToImport<T>> {
         }
 
         List<R> complexes = new ArrayList<>();
-        csvReader.forEach(csvLine -> complexes.add(complexFromStringArray(csvLine)));
+        csvReader.forEach(csvLine -> {
+            if (csvLine.length > 1 || (csvLine.length == 1 && !csvLine[0].isEmpty())) {
+                complexes.add(complexFromStringArray(csvLine));
+            }
+        });
         csvReader.close();
 
         return complexes;

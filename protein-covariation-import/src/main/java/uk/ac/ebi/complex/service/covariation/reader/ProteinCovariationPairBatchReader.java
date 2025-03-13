@@ -38,7 +38,9 @@ public class ProteinCovariationPairBatchReader implements ItemReader<List<Protei
         List<ProteinPairCovariation> proteinCovariations = new ArrayList<>();
         while (hasNext() && proteinCovariations.size() < BATCH_SIZE) {
             String[] csvLine = csvIterator.next();
-            proteinCovariations.add(proteinCovariationFromStringArray(csvLine));
+            if (csvLine.length > 1 || (csvLine.length == 1 && !csvLine[0].isEmpty())) {
+                proteinCovariations.add(proteinCovariationFromStringArray(csvLine));
+            }
         }
         if (!proteinCovariations.isEmpty()) {
             return proteinCovariations;
