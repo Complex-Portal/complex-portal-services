@@ -42,25 +42,23 @@ public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<
 
     @Override
     public void write(List<? extends List<ProteinPairCovariation>> items) throws Exception {
-        Collection<IntactProteinPairCovariation> existingProteinPairCovariations = getProteinCovariations(items);
-
+        Collection<ProteinPairCovariation> covariationsWithoutDuplicates = mergeDuplicates(items);
+        Collection<IntactProteinPairCovariation> existingProteinPairCovariationsInDb = getProteinCovariations(items);
         List<IntactProteinPairCovariation> newCovariationsToSave = new ArrayList<>();
         List<IntactProteinPairCovariation> covariationsToUpdate = new ArrayList<>();
 
-        for (List<ProteinPairCovariation> proteinCovariations : items) {
-            for (ProteinPairCovariation proteinCovariation : proteinCovariations) {
-                IntactProteinPairCovariation intactProteinPairCovariation = getProteinCovariationIfExists(
-                        existingProteinPairCovariations, proteinCovariation);
-                if (intactProteinPairCovariation == null) {
-                    newCovariationsToSave.add(new IntactProteinPairCovariation(
-                            proteinCovariation.getProteinA(),
-                            proteinCovariation.getProteinB(),
-                            proteinCovariation.getProbability(),
-                            database));
-                } else if (!intactProteinPairCovariation.getProbability().equals(proteinCovariation.getProbability())) {
-                    intactProteinPairCovariation.setProbability(proteinCovariation.getProbability());
-                    covariationsToUpdate.add(intactProteinPairCovariation);
-                }
+        for (ProteinPairCovariation proteinCovariation : covariationsWithoutDuplicates) {
+            IntactProteinPairCovariation intactProteinPairCovariation = getProteinCovariationIfExists(
+                    existingProteinPairCovariationsInDb, proteinCovariation);
+            if (intactProteinPairCovariation == null) {
+                newCovariationsToSave.add(new IntactProteinPairCovariation(
+                        proteinCovariation.getProteinA(),
+                        proteinCovariation.getProteinB(),
+                        proteinCovariation.getProbability(),
+                        database));
+            } else if (proteinCovariation.getProbability() > intactProteinPairCovariation.getProbability()) {
+                intactProteinPairCovariation.setProbability(proteinCovariation.getProbability());
+                covariationsToUpdate.add(intactProteinPairCovariation);
             }
         }
 
@@ -99,6 +97,24 @@ public class ProteinCovariationPairBatchWriter extends AbstractBatchWriter<List<
         }
 
         return null;
+    }
+
+    private Collection<ProteinPairCovariation> mergeDuplicates(List<? extends List<ProteinPairCovariation>> covariations) {
+        return covariations.stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toMap(
+                        covariation -> (covariation.getProteinA().compareTo(covariation.getProteinB()) < 0)
+                                ? covariation.getProteinA() + "_" + covariation.getProteinB()
+                                : covariation.getProteinB() + "_" + covariation.getProteinA(),
+                        covariation -> covariation,
+                        (covariationA, covariationB) -> {
+                            if (covariationA.getProbability() > covariationB.getProbability()) {
+                                return covariationA;
+                            } else {
+                                return covariationB;
+                            }
+                        }
+                )).values();
     }
 
     private IntactCvTerm findDatabase() throws SourceNotFoundException {
