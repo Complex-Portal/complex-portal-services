@@ -29,12 +29,8 @@ public class ComplexOrthologFinder {
     public Collection<IntactComplex> findComplexOrthologs(String complexId, Integer taxId) {
         Map<String, IntactProtein> proteinCacheMap = new HashMap<>();
 
-        System.out.println("Finding complex orthologs for " + complexId);
-
         IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexId);
         Collection<String> proteinOrthologIds = getOrthologIds(complex, proteinCacheMap);
-
-        System.out.println("Ortholog Ids found: " + String.join(", ", proteinOrthologIds));
 
         Collection<IntactComplex> complexes = findAllComplexesWithSameOrthologs(taxId, proteinOrthologIds, proteinCacheMap);
         return complexes.stream()
@@ -85,11 +81,7 @@ public class ComplexOrthologFinder {
             Collection<String> orthologIds,
             Map<String, IntactProtein> proteinCacheMap) {
 
-        System.out.println("Finding complexes with same orthologs");
         Collection<IntactComplex> complexes = findComplexesWithSameOrthologs(orthologIds);
-
-        System.out.println("Complexes found = " + complexes.size());
-
         return findAllComplexesWithAllOrthologsMatching(
                 taxId,
                 orthologIds,
@@ -107,25 +99,18 @@ public class ComplexOrthologFinder {
         List<String> complexesAcsToCheckAsSubcomplexes = new ArrayList<>();
 
         for (IntactComplex complex : complexesPartiallyMatching) {
-            System.out.println("Processing complex " + complex.getComplexAc());
             if (taxId == null || taxId.equals(complex.getOrganism().getTaxId())) {
                 Collection<String> complexOrthologIds = getOrthologIds(complex, proteinCacheMap);
-                System.out.println("Complex " + complex.getComplexAc() + " ortholog Ids found: " + String.join(", ", complexOrthologIds));
                 if (!complexOrthologIds.isEmpty() && orthologIds.containsAll(complexOrthologIds)) {
                     if (complexOrthologIds.size() == orthologIds.size()) {
-                        System.out.println("Complex " + complex.getComplexAc() + " is perfect match");
                         complexesWithAllMatchingOrthologs.add(complex);
                     }
                     complexesAcsToCheckAsSubcomplexes.add(complex.getComplexAc());
-                } else {
-                    System.out.println("Complex " + complex.getComplexAc() + " is no match");
                 }
             }
         }
 
-        System.out.println("Finding complexes with complex ids as subcomplex");
         Collection<IntactComplex> complexesWithSubcomplex = findComplexesWithSubComplexes(complexesAcsToCheckAsSubcomplexes);
-        System.out.println("Complexes with complexes as subcomplex found = " + complexesWithSubcomplex.size());
         if (!complexesWithSubcomplex.isEmpty()) {
             complexesWithAllMatchingOrthologs.addAll(findAllComplexesWithAllOrthologsMatching(
                     taxId,
