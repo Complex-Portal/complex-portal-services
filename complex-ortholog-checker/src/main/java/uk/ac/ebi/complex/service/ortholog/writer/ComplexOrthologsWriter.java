@@ -50,10 +50,22 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
         Assert.notNull(executionContext, "ExecutionContext must not be null");
+        try {
+            this.complexesWithNoOrthologs.flush();
+            this.complexesWithOrthologs.flush();
+        } catch (IOException e) {
+            throw new ItemStreamException("Report file writer could not be flushed", e);
+        }
     }
 
     @Override
     public void close() throws ItemStreamException {
+        try {
+            this.complexesWithNoOrthologs.close();
+            this.complexesWithOrthologs.close();
+        } catch (IOException e) {
+            throw new ItemStreamException("Report file writer could not be closed", e);
+        }
     }
 
     protected void initialiseReportWriters() throws IOException {
