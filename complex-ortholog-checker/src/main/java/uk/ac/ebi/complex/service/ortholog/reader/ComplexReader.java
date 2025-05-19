@@ -32,7 +32,7 @@ public class ComplexReader extends JpaPagingItemReader<IntactComplex> {
         String query = "select i " +
                 "from IntactComplex i " +
                 "join i.organism as o " +
-                "where o.dbTaxid = " + taxId;
+                "where o.dbTaxid = '" + taxId + "'";
         setQueryString(query);
 
         super.afterPropertiesSet();
