@@ -221,8 +221,11 @@ public class ComplexOrthologCheckerConfig {
     }
 
     @Bean
-    public ComplexReader complexReader(AppProperties appProperties) {
-        return new ComplexReader(appProperties.getInputTaxId());
+    public ComplexReader complexReader(AppProperties appProperties, EntityManagerFactory intactEntityManagerFactory) {
+        ComplexReader reader = new ComplexReader(appProperties.getInputTaxId());
+        reader.setEntityManagerFactory(intactEntityManagerFactory);
+        reader.setPageSize(50);
+        return reader;
     }
 
     @Bean
