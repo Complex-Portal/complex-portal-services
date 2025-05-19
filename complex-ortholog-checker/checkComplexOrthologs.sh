@@ -9,21 +9,21 @@
 #SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
-if [ $# -ne 7 ]; then
-      echo ""
-      echo "ERROR: wrong number of parameters ($#)."
-      echo "usage: $0 PROFILE USER_ID INPUT_TAX_ID OUTPUT_TAX_ID OUTPUT_DIRECTORY SEPARATOR[',', '\t'] HEADER[true, false]"
-      echo ""
-      exit 1
-fi
+#if [ $# -ne 7 ]; then
+#      echo ""
+#      echo "ERROR: wrong number of parameters ($#)."
+#      echo "usage: $0 PROFILE USER_ID INPUT_TAX_ID OUTPUT_TAX_ID OUTPUT_DIRECTORY SEPARATOR[',', '\t'] HEADER[true, false]"
+#      echo ""
+#      exit 1
+#fi
 
-PROFILE=$1;
-USER_ID=$2;
-INPUT_TAX_ID=$3
-OUTPUT_TAX_ID=$4
-OUTPUT_DIRECTORY=$5
-SEPARATOR=$6
-HEADER=$7
+PROFILE=ebi-test
+USER_ID=jmedina
+INPUT_TAX_ID=559292
+OUTPUT_TAX_ID=9606
+OUTPUT_DIRECTORY=/homes/mi/test-complex-orthologs/reports
+SEPARATOR=,
+HEADER=true
 
 echo "Profile: $PROFILE"
 echo "User id: $USER_ID"
