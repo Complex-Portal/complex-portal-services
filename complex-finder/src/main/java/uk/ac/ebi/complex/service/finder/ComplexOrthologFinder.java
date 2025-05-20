@@ -25,7 +25,12 @@ public class ComplexOrthologFinder {
     public Collection<IntactComplex> findComplexOrthologs(String complexId, Integer taxId) {
         Map<String, IntactProtein> proteinCacheMap = new HashMap<>();
 
-        IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexId);
+        final IntactComplex complex;
+        if (complexId.startsWith("CPX-")) {
+            complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexId);
+        } else {
+            complex = intactDao.getComplexDao().getByAc(complexId);
+        }
         Collection<String> proteinOrthologIds = getOrthologIds(complex, proteinCacheMap);
 
         Collection<IntactComplex> complexes = findAllComplexesWithSameOrthologs(taxId, proteinOrthologIds, proteinCacheMap);
