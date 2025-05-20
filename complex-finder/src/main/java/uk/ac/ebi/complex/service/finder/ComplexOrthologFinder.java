@@ -22,10 +22,6 @@ public class ComplexOrthologFinder {
     private final static String ORTHOLOGY_MI = "MI:2426";
     private final IntactDao intactDao;
 
-    public Collection<IntactComplex> findComplexOrthologs(String complexId) {
-        return findComplexOrthologs(complexId, null);
-    }
-
     public Collection<IntactComplex> findComplexOrthologs(String complexId, Integer taxId) {
         Map<String, IntactProtein> proteinCacheMap = new HashMap<>();
 
@@ -102,7 +98,7 @@ public class ComplexOrthologFinder {
             if (taxId == null || taxId.equals(complex.getOrganism().getTaxId())) {
                 Collection<String> complexOrthologIds = getOrthologIds(complex, proteinCacheMap);
                 if (!complexOrthologIds.isEmpty() && orthologIds.containsAll(complexOrthologIds)) {
-                    if (complexOrthologIds.size() == orthologIds.size()) {
+                    if (complexOrthologIds.containsAll(orthologIds)) {
                         complexesWithAllMatchingOrthologs.add(complex);
                     }
                     complexesAcsToCheckAsSubcomplexes.add(complex.getComplexAc());
@@ -112,6 +108,7 @@ public class ComplexOrthologFinder {
 
         Collection<IntactComplex> complexesWithSubcomplex = findComplexesWithSubComplexes(complexesAcsToCheckAsSubcomplexes);
         if (!complexesWithSubcomplex.isEmpty()) {
+            System.out.println("complexes to check as subcomplex = " + complexesWithSubcomplex.size());
             complexesWithAllMatchingOrthologs.addAll(findAllComplexesWithAllOrthologsMatching(
                     taxId,
                     orthologIds,
@@ -130,7 +127,18 @@ public class ComplexOrthologFinder {
                 "join interactor.dbXrefs as xref " +
                 "join xref.qualifier as qualifier " +
                 "where qualifier.identifier = :orthologQualifierId " +
-                "and xref.id in (:orthologIds)");
+                "and xref.id in (:orthologIds) " +
+                "and not exists (" +
+                "  select distinct complex2.ac " +
+                "  from IntactComplex complex2 " +
+                "  join complex2.participants as participant2 " +
+                "  join participant2.interactor as interactor2 " +
+                "  join interactor2.dbXrefs as xref2 " +
+                "  join xref2.qualifier as qualifier2 " +
+                "  where complex.ac = complex2.ac " +
+                "  and qualifier2.identifier = :orthologQualifierId " +
+                "  and xref2.id not in (:orthologIds) " +
+                ")");
         query.setParameter("orthologQualifierId", ORTHOLOGY_MI);
         query.setParameter("orthologIds", orthologIds);
         return query.getResultList();
