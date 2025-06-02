@@ -25,7 +25,7 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
     private ReportWriter complexesWithOrthologs;
 
     @Override
-    public void write(List<? extends ComplexOrthologs> items) {
+    public void write(List<? extends ComplexOrthologs> items) throws IOException {
         for (ComplexOrthologs item : items) {
             if (item.getOutputComplexIds().isEmpty()) {
                 complexesWithNoOrthologs.writeLine(
@@ -35,6 +35,8 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
                         new String[]{ item.getInputComplexId(), String.join("|", item.getOutputComplexIds()) });
             }
         }
+        this.complexesWithNoOrthologs.flush();
+        this.complexesWithOrthologs.flush();
     }
 
     @Override
@@ -61,7 +63,9 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
     @Override
     public void close() throws ItemStreamException {
         try {
+            this.complexesWithNoOrthologs.flush();
             this.complexesWithNoOrthologs.close();
+            this.complexesWithOrthologs.flush();
             this.complexesWithOrthologs.close();
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be closed", e);
