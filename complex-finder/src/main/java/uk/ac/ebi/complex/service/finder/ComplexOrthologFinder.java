@@ -1,19 +1,23 @@
 package uk.ac.ebi.complex.service.finder;
 
 import lombok.AllArgsConstructor;
-import psidev.psi.mi.jami.model.ModelledComparableParticipant;
+import psidev.psi.mi.jami.model.Interactor;
+import psidev.psi.mi.jami.model.ModelledParticipant;
 import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.utils.XrefUtils;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
+import uk.ac.ebi.intact.jami.model.extension.IntactInteractorPool;
 import uk.ac.ebi.intact.jami.model.extension.IntactProtein;
 
 import javax.persistence.Query;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @AllArgsConstructor
@@ -23,85 +27,75 @@ public class ComplexOrthologFinder {
     private final IntactDao intactDao;
 
     public Collection<IntactComplex> findComplexOrthologs(String complexId, Integer taxId) {
-        Map<String, IntactProtein> proteinCacheMap = new HashMap<>();
-
         final IntactComplex complex;
         if (complexId.startsWith("CPX-")) {
             complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexId);
         } else {
             complex = intactDao.getComplexDao().getByAc(complexId);
         }
-        Collection<String> proteinOrthologIds = getOrthologIds(complex, proteinCacheMap);
+        Collection<String> proteinOrthologIds = getOrthologIds(complex);
 
-        Collection<IntactComplex> complexes = findAllComplexesWithSameOrthologs(taxId, proteinOrthologIds, proteinCacheMap);
+        Collection<IntactComplex> complexes = findAllComplexesWithSameOrthologs(taxId, proteinOrthologIds);
         return complexes.stream()
                 .filter(complexMatch -> !complexMatch.getComplexAc().equals(complex.getComplexAc()))
                 .collect(Collectors.toList());
     }
 
-    private Collection<ModelledComparableParticipant> getProteinComponents(
-            IntactComplex complex,
-            Map<String, IntactProtein> proteinCacheMap) {
+    private Collection<String> getOrthologIds(IntactComplex complex) {
+        Map<String, Collection<String>> proteinToOrthologsMap = getOrthologIdsByProtein(complex);
 
-        return complex.getComparableParticipants(
-                true,
-                proteinAc -> {
-                    if (!proteinCacheMap.containsKey(proteinAc)) {
-                        IntactProtein protein = intactDao.getProteinDao().getByAc(proteinAc);
-                        proteinCacheMap.put(proteinAc, protein);
-                    }
-                    return proteinCacheMap.get(proteinAc);
-                }
-        );
-    }
-
-    private Collection<IntactProtein> getProteins(IntactComplex complex, Map<String, IntactProtein> proteinCacheMap) {
-        Collection<ModelledComparableParticipant> participants = getProteinComponents(complex, proteinCacheMap);
-        Collection<String> proteinIds = participants.stream()
-                .map(ModelledComparableParticipant::getInteractorId)
-                .collect(Collectors.toList());
-        return this.intactDao.getProteinDao().getByCanonicalIds(Xref.UNIPROTKB_MI, proteinIds);
-    }
-
-    private Collection<String> getOrthologIds(IntactComplex complex, Map<String, IntactProtein> proteinCacheMap) {
-        Collection<IntactProtein> complexProteins = getProteins(complex, proteinCacheMap);
-        Collection<String> proteinOrthologIds = new ArrayList<>();
-        for (IntactProtein protein : complexProteins) {
-            Collection<Xref> orthologXrefs = XrefUtils.collectAllXrefsHavingQualifier(protein.getXrefs(), ORTHOLOGY_MI, null);
-            if (orthologXrefs.isEmpty()) {
-                return List.of();
+        Set<String> orthologIds = new HashSet<>();
+        for (String proteinId: proteinToOrthologsMap.keySet()) {
+            Collection<String> proteinOrthologIds = proteinToOrthologsMap.get(proteinId);
+            if (proteinOrthologIds.isEmpty()) {
+                return Set.of();
+            } else {
+                orthologIds.add(proteinOrthologIds.iterator().next());
             }
-            Xref orthologXref = orthologXrefs.iterator().next();
-            proteinOrthologIds.add(orthologXref.getId());
         }
-        return proteinOrthologIds;
+        return orthologIds;
     }
 
-    private Collection<IntactComplex> findAllComplexesWithSameOrthologs(
-            Integer taxId,
-            Collection<String> orthologIds,
-            Map<String, IntactProtein> proteinCacheMap) {
+    private Map<String, Collection<String>> getOrthologIdsByProtein(IntactComplex complex) {
+        Map<String, Collection<String>> proteinToOrthologsMap = new HashMap<>();
+        for (ModelledParticipant participant: complex.getParticipants()) {
+            Interactor interactor = participant.getInteractor();
+            if (interactor instanceof IntactProtein) {
+                IntactProtein protein = (IntactProtein) interactor;
+                Collection<Xref> orthologXrefs = XrefUtils.collectAllXrefsHavingQualifier(protein.getXrefs(), ORTHOLOGY_MI, null);
+                proteinToOrthologsMap.put(protein.getAc(), orthologXrefs.stream().map(Xref::getId).collect(Collectors.toList()));
+            } else if (interactor instanceof IntactInteractorPool) {
+                IntactInteractorPool pool = (IntactInteractorPool) interactor;
+                for (Interactor subInteractor: pool) {
+                    if (subInteractor instanceof IntactProtein) {
+                        IntactProtein protein = (IntactProtein) subInteractor;
+                        Collection<Xref> orthologXrefs = XrefUtils.collectAllXrefsHavingQualifier(protein.getXrefs(), ORTHOLOGY_MI, null);
+                        proteinToOrthologsMap.put(protein.getAc(), orthologXrefs.stream().map(Xref::getId).collect(Collectors.toList()));
+                    }
+                }
+            } else if (interactor instanceof IntactComplex) {
+                proteinToOrthologsMap.putAll(getOrthologIdsByProtein((IntactComplex) interactor));
+            }
+        }
+        return proteinToOrthologsMap;
+    }
 
+    private Collection<IntactComplex> findAllComplexesWithSameOrthologs(Integer taxId, Collection<String> orthologIds) {
         Collection<IntactComplex> complexes = findComplexesWithSameOrthologs(orthologIds);
-        return findAllComplexesWithAllOrthologsMatching(
-                taxId,
-                orthologIds,
-                complexes,
-                proteinCacheMap);
+        return findAllComplexesWithAllOrthologsMatching(taxId, orthologIds, complexes);
     }
 
     private Collection<IntactComplex> findAllComplexesWithAllOrthologsMatching(
             Integer taxId,
             Collection<String> orthologIds,
-            Collection<IntactComplex> complexesPartiallyMatching,
-            Map<String, IntactProtein> proteinCacheMap) {
+            Collection<IntactComplex> complexesPartiallyMatching) {
 
         List<IntactComplex> complexesWithAllMatchingOrthologs = new ArrayList<>();
         List<String> complexesAcsToCheckAsSubcomplexes = new ArrayList<>();
 
         for (IntactComplex complex : complexesPartiallyMatching) {
             if (taxId == null || taxId.equals(complex.getOrganism().getTaxId())) {
-                Collection<String> complexOrthologIds = getOrthologIds(complex, proteinCacheMap);
+                Collection<String> complexOrthologIds = getOrthologIds(complex);
                 if (!complexOrthologIds.isEmpty() && orthologIds.containsAll(complexOrthologIds)) {
                     if (complexOrthologIds.containsAll(orthologIds)) {
                         complexesWithAllMatchingOrthologs.add(complex);
@@ -113,12 +107,10 @@ public class ComplexOrthologFinder {
 
         Collection<IntactComplex> complexesWithSubcomplex = findComplexesWithSubComplexes(complexesAcsToCheckAsSubcomplexes);
         if (!complexesWithSubcomplex.isEmpty()) {
-            System.out.println("complexes to check as subcomplex = " + complexesWithSubcomplex.size());
             complexesWithAllMatchingOrthologs.addAll(findAllComplexesWithAllOrthologsMatching(
                     taxId,
                     orthologIds,
-                    complexesWithSubcomplex,
-                    proteinCacheMap));
+                    complexesWithSubcomplex));
         }
 
         return complexesWithAllMatchingOrthologs;
