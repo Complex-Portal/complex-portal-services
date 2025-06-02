@@ -27,6 +27,10 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
     @Override
     public void write(List<? extends ComplexOrthologs> items) throws IOException {
         for (ComplexOrthologs item : items) {
+            if (item.getInputComplexId().equals("CPX-2130")) {
+                log.info("-- DEBUG (write) -- " + item.getInputComplexId());
+                log.info("-- DEBUG (write) -- OutputComplexIds = " + item.getOutputComplexIds().size());
+            }
             if (item.getOutputComplexIds().isEmpty()) {
                 complexesWithNoOrthologs.writeLine(
                         new String[]{ item.getInputComplexId() });
