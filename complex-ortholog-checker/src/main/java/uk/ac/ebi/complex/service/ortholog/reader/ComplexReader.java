@@ -15,9 +15,11 @@
  */
 package uk.ac.ebi.complex.service.ortholog.reader;
 
+import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.database.JpaPagingItemReader;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
+@Log4j
 public class ComplexReader extends JpaPagingItemReader<IntactComplex> {
 
     private final String taxId;
@@ -32,9 +34,19 @@ public class ComplexReader extends JpaPagingItemReader<IntactComplex> {
         String query = "select i " +
                 "from IntactComplex i " +
                 "join i.organism as o " +
-                "where o.dbTaxid = '" + taxId + "'";
+                "where o.dbTaxid = '" + taxId + "' " +
+                "order by i.ac";
         setQueryString(query);
 
         super.afterPropertiesSet();
+    }
+
+    @Override
+    protected IntactComplex doRead() throws Exception {
+        IntactComplex result = super.doRead();
+        if (result != null) {
+            log.info("-- DEBUG (read) -- " + result.getAc() + " - " + result.getComplexAc());
+        }
+        return result;
     }
 }

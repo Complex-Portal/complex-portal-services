@@ -23,9 +23,7 @@ public class ComplexOrthologsProcessor implements ItemProcessor<IntactComplex, C
 
     @Override
     public ComplexOrthologs process(IntactComplex item) {
-        if (item.getComplexAc().equals("CPX-2130")) {
-            log.info("-- DEBUG (process) -- " + item.getComplexAc());
-        }
+        log.info("-- DEBUG (process) -- " + item.getAc() + " - " + item.getComplexAc());
         Collection<IntactComplex> complexes = this.complexOrthologFinder.findComplexOrthologs(
                 item.getComplexAc(), Integer.valueOf(taxId));
         if (item.getComplexAc().equals("CPX-2130")) {
