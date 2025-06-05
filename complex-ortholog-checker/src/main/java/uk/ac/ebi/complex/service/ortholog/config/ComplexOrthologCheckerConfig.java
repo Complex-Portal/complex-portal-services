@@ -234,7 +234,7 @@ public class ComplexOrthologCheckerConfig {
     }
 
     @Bean
-    public ComplexOrthologsWriter complexImportBatchProcessor(FileConfiguration fileConfiguration) {
+    public ComplexOrthologsWriter complexOrthologsWriter(FileConfiguration fileConfiguration) {
         return new ComplexOrthologsWriter(fileConfiguration);
     }
 

@@ -12,6 +12,17 @@ import java.util.Collection;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ComplexOrthologs {
-    private String inputComplexId;
-    private Collection<String> outputComplexIds;
+    private ComplexWithXrefs inputComplex;
+    private Collection<ComplexWithXrefs> outputComplexes;
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ComplexWithXrefs {
+        private String complexId;
+        private Collection<String> molecularFunctions;
+        private Collection<String> biologicalProcesses;
+        private Collection<String> cellularComponents;
+    }
 }

@@ -27,12 +27,27 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
     @Override
     public void write(List<? extends ComplexOrthologs> items) throws IOException {
         for (ComplexOrthologs item : items) {
-            if (item.getOutputComplexIds().isEmpty()) {
-                complexesWithNoOrthologs.writeLine(
-                        new String[]{ item.getInputComplexId() });
+            if (item.getOutputComplexes().isEmpty()) {
+                complexesWithNoOrthologs.writeLine(new String[]{
+                        item.getInputComplex().getComplexId(),
+                        String.join("|", item.getInputComplex().getMolecularFunctions()),
+                        String.join("|", item.getInputComplex().getBiologicalProcesses()),
+                        String.join("|", item.getInputComplex().getCellularComponents())
+                });
             } else {
-                complexesWithOrthologs.writeLine(
-                        new String[]{ item.getInputComplexId(), String.join("|", item.getOutputComplexIds()) });
+                for (ComplexOrthologs.ComplexWithXrefs complexWithXref : item.getOutputComplexes()) {
+                    complexesWithOrthologs.writeLine(new String[]{
+                            item.getInputComplex().getComplexId(),
+                            String.join("|", item.getInputComplex().getMolecularFunctions()),
+                            String.join("|", item.getInputComplex().getBiologicalProcesses()),
+                            String.join("|", item.getInputComplex().getCellularComponents()),
+                            complexWithXref.getComplexId(),
+                            String.join("|", complexWithXref.getMolecularFunctions()),
+                            String.join("|", complexWithXref.getBiologicalProcesses()),
+                            String.join("|", complexWithXref.getCellularComponents())
+                    });
+                }
+
             }
         }
     }
@@ -84,8 +99,11 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
         String extension = fileConfiguration.getExtension();
 
         File noOrthologsFile = new File(reportDirectory, "no_orthologs" + extension);
-        this.complexesWithNoOrthologs = new ReportWriter(noOrthologsFile, separator, header, new String[]{"complex_id"});
+        this.complexesWithNoOrthologs = new ReportWriter(noOrthologsFile, separator, header, new String[]{
+                "complex_id", "molecular_function", "biological_process", "cellular_component"});
         File withOrthologsFile = new File(reportDirectory, "with_orthologs" + extension);
-        this.complexesWithOrthologs = new ReportWriter(withOrthologsFile, separator, header, new String[]{"complex_id", "complex_orthologs"});
+        this.complexesWithOrthologs = new ReportWriter(withOrthologsFile, separator, header, new String[]{
+                "complex_id", "molecular_function", "biological_process", "cellular_component",
+                "complex_ortholog_id", "ortholog_molecular_function", "ortholog_biological_process", "ortholog_cellular_component"});
     }
 }
