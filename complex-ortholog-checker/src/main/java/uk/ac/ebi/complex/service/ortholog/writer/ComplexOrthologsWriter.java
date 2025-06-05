@@ -100,10 +100,10 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
 
         File noOrthologsFile = new File(reportDirectory, "no_orthologs" + extension);
         this.complexesWithNoOrthologs = new ReportWriter(noOrthologsFile, separator, header, new String[]{
-                "complex_id", "molecular_function", "biological_process", "cellular_component"});
+                "complex_id", "molecular_functions", "biological_processes", "cellular_components"});
         File withOrthologsFile = new File(reportDirectory, "with_orthologs" + extension);
         this.complexesWithOrthologs = new ReportWriter(withOrthologsFile, separator, header, new String[]{
-                "complex_id", "molecular_function", "biological_process", "cellular_component",
-                "complex_ortholog_id", "ortholog_molecular_function", "ortholog_biological_process", "ortholog_cellular_component"});
+                "complex_id", "molecular_functions", "biological_processes", "cellular_components",
+                "complex_ortholog_id", "ortholog_molecular_functions", "ortholog_biological_processes", "ortholog_cellular_components"});
     }
 }
