@@ -21,8 +21,9 @@ public class ComplexOrthologs {
     @NoArgsConstructor
     public static class ComplexWithXrefs {
         private String complexId;
-        private Collection<String> molecularFunctions;
-        private Collection<String> biologicalProcesses;
+        private String complexName;
+//        private Collection<String> molecularFunctions;
+//        private Collection<String> biologicalProcesses;
         private Collection<String> cellularComponents;
     }
 }

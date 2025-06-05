@@ -7,14 +7,18 @@ import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
+import psidev.psi.mi.jami.model.Alias;
 import psidev.psi.mi.jami.model.Xref;
+import psidev.psi.mi.jami.utils.AliasUtils;
 import psidev.psi.mi.jami.utils.XrefUtils;
 import uk.ac.ebi.complex.service.finder.ComplexOrthologFinder;
 import uk.ac.ebi.complex.service.ortholog.model.ComplexOrthologs;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleStatus;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -81,9 +85,28 @@ public class ComplexOrthologsProcessor implements ItemProcessor<IntactComplex, C
         Collection<Xref> goXrefs = getGoXrefs(complex);
         return ComplexOrthologs.ComplexWithXrefs.builder()
                 .complexId(complex.getComplexAc())
-                .molecularFunctions(filterXrefsWithQualifierFullName(goXrefs, MOLECULAR_FUNCTION_QUALIFIER_NAME))
-                .biologicalProcesses(filterXrefsWithQualifierFullName(goXrefs, BIOLOGICAL_PROCESS_QUALIFIER_NAME))
+                .complexName(getComplexName(complex))
+//                .molecularFunctions(filterXrefsWithQualifierFullName(goXrefs, MOLECULAR_FUNCTION_QUALIFIER_NAME))
+//                .biologicalProcesses(filterXrefsWithQualifierFullName(goXrefs, BIOLOGICAL_PROCESS_QUALIFIER_NAME))
                 .cellularComponents(filterXrefsWithQualifierFullName(goXrefs, CELLULAR_COMPONENT_QUALIFIER_NAME))
                 .build();
+    }
+
+    private String getComplexName(IntactComplex complex) {
+        String name = complex.getRecommendedName();
+        if (name != null) return name;
+        name = complex.getSystematicName();
+        if (name != null) return name;
+        List<String> synonyms = getComplexSynonyms(complex);
+        if (!synonyms.isEmpty()) return synonyms.get(0);
+        return complex.getShortName();
+    }
+
+    private List<String> getComplexSynonyms(IntactComplex complex) {
+        List<String> synosyms = new ArrayList<>();
+        for (Alias alias : AliasUtils.collectAllAliasesHavingType(complex.getAliases(), Alias.COMPLEX_SYNONYM_MI, Alias.COMPLEX_SYNONYM)) {
+            synosyms.add(alias.getName());
+        }
+        return synosyms;
     }
 }

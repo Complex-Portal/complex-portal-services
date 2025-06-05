@@ -25,25 +25,28 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
     private ReportWriter complexesWithOrthologs;
 
     @Override
-    public void write(List<? extends ComplexOrthologs> items) throws IOException {
+    public void write(List<? extends ComplexOrthologs> items) {
         for (ComplexOrthologs item : items) {
             if (item.getOutputComplexes().isEmpty()) {
                 complexesWithNoOrthologs.writeLine(new String[]{
                         item.getInputComplex().getComplexId(),
-                        String.join("|", item.getInputComplex().getMolecularFunctions()),
-                        String.join("|", item.getInputComplex().getBiologicalProcesses()),
+                        item.getInputComplex().getComplexName(),
+//                        String.join("|", item.getInputComplex().getMolecularFunctions()),
+//                        String.join("|", item.getInputComplex().getBiologicalProcesses()),
                         String.join("|", item.getInputComplex().getCellularComponents())
                 });
             } else {
                 for (ComplexOrthologs.ComplexWithXrefs complexWithXref : item.getOutputComplexes()) {
                     complexesWithOrthologs.writeLine(new String[]{
                             item.getInputComplex().getComplexId(),
-                            String.join("|", item.getInputComplex().getMolecularFunctions()),
-                            String.join("|", item.getInputComplex().getBiologicalProcesses()),
+                            item.getInputComplex().getComplexName(),
+//                            String.join("|", item.getInputComplex().getMolecularFunctions()),
+//                            String.join("|", item.getInputComplex().getBiologicalProcesses()),
                             String.join("|", item.getInputComplex().getCellularComponents()),
                             complexWithXref.getComplexId(),
-                            String.join("|", complexWithXref.getMolecularFunctions()),
-                            String.join("|", complexWithXref.getBiologicalProcesses()),
+                            complexWithXref.getComplexName(),
+//                            String.join("|", complexWithXref.getMolecularFunctions()),
+//                            String.join("|", complexWithXref.getBiologicalProcesses()),
                             String.join("|", complexWithXref.getCellularComponents())
                     });
                 }
@@ -100,10 +103,24 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
 
         File noOrthologsFile = new File(reportDirectory, "no_orthologs" + extension);
         this.complexesWithNoOrthologs = new ReportWriter(noOrthologsFile, separator, header, new String[]{
-                "complex_id", "molecular_functions", "biological_processes", "cellular_components"});
+                "complex_id",
+                "complex_name",
+//                "molecular_functions",
+//                "biological_processes",
+                "cellular_components"
+        });
         File withOrthologsFile = new File(reportDirectory, "with_orthologs" + extension);
         this.complexesWithOrthologs = new ReportWriter(withOrthologsFile, separator, header, new String[]{
-                "complex_id", "molecular_functions", "biological_processes", "cellular_components",
-                "complex_ortholog_id", "ortholog_molecular_functions", "ortholog_biological_processes", "ortholog_cellular_components"});
+                "complex_id",
+                "complex_name",
+//                "molecular_functions",
+//                "biological_processes",
+                "cellular_components",
+                "ortholog_complex_id",
+                "ortholog_complex_name",
+//                "ortholog_molecular_functions",
+//                "ortholog_biological_processes",
+                "ortholog_cellular_components"
+        });
     }
 }
