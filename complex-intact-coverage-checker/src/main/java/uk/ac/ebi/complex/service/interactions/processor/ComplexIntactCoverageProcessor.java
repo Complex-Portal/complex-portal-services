@@ -48,13 +48,17 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
     private final HttpClient client;
     private final ObjectMapper mapper;
 
+    private Set<String> proteinPairsAlreadyChecked;
+
     @Override
     public ComplexIntactCoverage process(IntactComplex item) throws IOException, InterruptedException {
         if (!item.isPredictedComplex() && STATUSES_TO_CONSIDER.contains(item.getStatus())) {
             Set<ModelledParticipant> complexParticipants = getAllComplexParticipants(item);
             Set<String> proteinAcs = getProteinAcsFromParticipants(complexParticipants);
-            List<IntactProteinPairScore> intactProteinPairScores = getProteinPairScoresFromIntact(proteinAcs);
-            return buildComplexIntactCoverage(item.getComplexAc(), complexParticipants, intactProteinPairScores);
+            Set<String> filteredProteinAcs = filterProteinsAlreadyChecked(proteinAcs);
+            List<IntactProteinPairScore> intactProteinPairScores = getProteinPairScoresFromIntact(filteredProteinAcs);
+            List<IntactProteinPairScore> filteredIntactProteinPairScores = filterProteinScoresAlreadyChecked(intactProteinPairScores);
+            return buildComplexIntactCoverage(item.getComplexAc(), complexParticipants, filteredIntactProteinPairScores);
 
         }
         return null;
@@ -62,6 +66,7 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
+        proteinPairsAlreadyChecked = new HashSet<>();
         Assert.notNull(executionContext, "ExecutionContext must not be null");
     }
 
@@ -200,4 +205,42 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
         }
         return "?" + sj;
     }
+
+    private List<IntactProteinPairScore> filterProteinScoresAlreadyChecked(
+            List<IntactProteinPairScore> intactProteinPairScores) {
+
+        List<IntactProteinPairScore> filteredScores = new ArrayList<>();
+        for (IntactProteinPairScore IntactProteinPairScore : intactProteinPairScores) {
+            String mergedProteinIds;
+            if (IntactProteinPairScore.getProteinA().compareTo(IntactProteinPairScore.getProteinB()) <= 0) {
+                mergedProteinIds = IntactProteinPairScore.getProteinA() + "_" + IntactProteinPairScore.getProteinB();
+            } else {
+                mergedProteinIds = IntactProteinPairScore.getProteinB() + "_" + IntactProteinPairScore.getProteinA();
+            }
+            if (!proteinPairsAlreadyChecked.contains(mergedProteinIds)) {
+                proteinPairsAlreadyChecked.add(mergedProteinIds);
+                filteredScores.add(IntactProteinPairScore);
+            }
+        }
+        return filteredScores;
     }
+
+    private Set<String> filterProteinsAlreadyChecked(Set<String> proteinAcs) {
+        Set<String> filteredProteinAcs = new HashSet<>();
+        for (String proteinA : proteinAcs) {
+            for (String proteinB : proteinAcs) {
+                String mergedProteinIds;
+                if (proteinA.compareTo(proteinB) <= 0) {
+                    mergedProteinIds = proteinA + "_" + proteinB;
+                } else {
+                    mergedProteinIds = proteinB + "_" + proteinA;
+                }
+                if (!proteinPairsAlreadyChecked.contains(mergedProteinIds)) {
+                    filteredProteinAcs.add(proteinA);
+                    filteredProteinAcs.add(proteinB);
+                }
+            }
+        }
+        return filteredProteinAcs;
+    }
+}
