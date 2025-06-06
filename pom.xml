@@ -23,6 +23,7 @@
         <intact.jami.version>3.2.1-SNAPSHOT</intact.jami.version>
         <spring.version>4.3.30.RELEASE</spring.version>
         <lombok.version>1.18.28</lombok.version>
+        <jackson.version>2.15.2</jackson.version>
     </properties>
 
     <modules>
