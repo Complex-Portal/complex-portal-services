@@ -30,7 +30,7 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
             if (item.getOutputComplexes().isEmpty()) {
                 complexesWithNoOrthologs.writeLine(new String[]{
                         item.getInputComplex().getComplexId(),
-                        item.getInputComplex().getComplexName(),
+                        prepareString(item.getInputComplex().getComplexName()),
 //                        String.join("|", item.getInputComplex().getMolecularFunctions()),
 //                        String.join("|", item.getInputComplex().getBiologicalProcesses()),
                         String.join("|", item.getInputComplex().getCellularComponents())
@@ -39,12 +39,12 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
                 for (ComplexOrthologs.ComplexWithXrefs complexWithXref : item.getOutputComplexes()) {
                     complexesWithOrthologs.writeLine(new String[]{
                             item.getInputComplex().getComplexId(),
-                            item.getInputComplex().getComplexName(),
+                            prepareString(item.getInputComplex().getComplexName()),
 //                            String.join("|", item.getInputComplex().getMolecularFunctions()),
 //                            String.join("|", item.getInputComplex().getBiologicalProcesses()),
                             String.join("|", item.getInputComplex().getCellularComponents()),
                             complexWithXref.getComplexId(),
-                            complexWithXref.getComplexName(),
+                            prepareString(complexWithXref.getComplexName()),
 //                            String.join("|", complexWithXref.getMolecularFunctions()),
 //                            String.join("|", complexWithXref.getBiologicalProcesses()),
                             String.join("|", complexWithXref.getCellularComponents())
@@ -122,5 +122,14 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
 //                "ortholog_biological_processes",
                 "ortholog_cellular_components"
         });
+    }
+
+    private String prepareString(String value) {
+        if (value != null && value.isEmpty()) {
+            value = value.replaceAll("\n", " ");
+            value = value.replaceAll("\t", " ");
+            value = value.replaceAll("\\s+", " ");
+        }
+        return value;
     }
 }
