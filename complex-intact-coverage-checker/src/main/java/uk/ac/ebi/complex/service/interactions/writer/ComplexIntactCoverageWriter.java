@@ -71,8 +71,8 @@ public class ComplexIntactCoverageWriter implements ItemWriter<ComplexIntactCove
     public void close() throws ItemStreamException {
         try {
             this.proteinPairsWithNoIntactInteractions.flush();
-            this.proteinPairsWithIntactInteractions.close();
-            this.proteinPairsWithNoIntactInteractions.flush();
+            this.proteinPairsWithNoIntactInteractions.close();
+            this.proteinPairsWithIntactInteractions.flush();
             this.proteinPairsWithIntactInteractions.close();
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be closed", e);
