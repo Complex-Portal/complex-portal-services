@@ -44,7 +44,7 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
             LifeCycleStatus.READY_FOR_RELEASE,
             LifeCycleStatus.RELEASED);
 
-    private final String intactProteinScoresEndpointUrl;
+    private final String intactGraphWsUrl;
     private final HttpClient client;
     private final ObjectMapper mapper;
 
@@ -183,6 +183,7 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
             Collection<String> complexProteinIds) throws IOException, InterruptedException {
 
         Map<String, String> params = Map.of("proteinAcs", String.join(",", complexProteinIds));
+        String intactProteinScoresEndpointUrl = intactGraphWsUrl + "interaction/protein-scores";
         return getRequest(intactProteinScoresEndpointUrl, params, new TypeReference<>() {});
     }
 
