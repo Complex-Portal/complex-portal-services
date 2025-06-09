@@ -92,7 +92,6 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
 
     private Set<String> getProteinAcsFromParticipants(Set<ModelledParticipant> complexParticipants) {
         Set<String> proteinAcs = new HashSet<>();
-        System.out.println("Number of participants: " + complexParticipants.size());
 
         for (ModelledParticipant participant : complexParticipants) {
             if (participant.getInteractor() instanceof Protein) {
@@ -106,8 +105,6 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
                 }
             }
         }
-        System.out.println("Number of proteinAcs: " + proteinAcs.size());
-        System.out.println("ProteinAcs: " + String.join(",", proteinAcs));
         return proteinAcs;
     }
 
