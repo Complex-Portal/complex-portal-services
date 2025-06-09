@@ -20,6 +20,7 @@ public class ComplexReader extends JpaPagingItemReader<IntactComplex> {
                 "from IntactComplex i " +
                 "join i.organism as o " +
                 "where o.dbTaxid = '" + taxId + "' " +
+                "and (i.predictedComplex is false or i.predictedComplex is null) " +
                 "order by i.ac";
         setQueryString(query);
 
