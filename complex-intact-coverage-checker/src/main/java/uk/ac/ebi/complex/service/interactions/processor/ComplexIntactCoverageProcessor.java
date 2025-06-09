@@ -65,7 +65,7 @@ public class ComplexIntactCoverageProcessor implements ItemProcessor<IntactCompl
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-//        proteinPairsAlreadyChecked = new HashSet<>();
+        proteinPairsAlreadyChecked = new HashSet<>();
         Assert.notNull(executionContext, "ExecutionContext must not be null");
     }
 
