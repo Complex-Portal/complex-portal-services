@@ -84,7 +84,7 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
         }
 
         if (!appProperties.isDryRunMode()) {
-            this.intactService.saveOrUpdate(complexesToSave.values());
+//            this.intactService.saveOrUpdate(complexesToSave.values());
         }
     }
 
