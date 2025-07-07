@@ -33,6 +33,7 @@
         <module>music-import</module>
         <module>pdb-import</module>
         <module>protein-covariation-import</module>
+        <module>complex-intact-coverage-checker</module>
     </modules>
 
     <scm>
