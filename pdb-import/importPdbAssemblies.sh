@@ -17,8 +17,8 @@ if [ $# -ne 6 ]; then
       exit 1
 fi
 
-PROFILE=$1;
-USER_ID=$2;
+PROFILE=$1
+USER_ID=$2
 INPUT_FILE=$3
 OUTPUT_DIRECTORY=$4
 SEPARATOR=$5
