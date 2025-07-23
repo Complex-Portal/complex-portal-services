@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ComplexOrthologFinder {
 
-    private final static String ORTHOLOGY_MI = "MI:2426";
+    protected final static String ORTHOLOGY_MI = "MI:2426";
     private final IntactDao intactDao;
 
     public Collection<IntactComplex> findComplexOrthologs(String complexId, Integer taxId) {
@@ -105,12 +105,14 @@ public class ComplexOrthologFinder {
             }
         }
 
-        Collection<IntactComplex> complexesWithSubcomplex = findComplexesWithSubComplexes(complexesAcsToCheckAsSubcomplexes);
-        if (!complexesWithSubcomplex.isEmpty()) {
-            complexesWithAllMatchingOrthologs.addAll(findAllComplexesWithAllOrthologsMatching(
-                    taxId,
-                    orthologIds,
-                    complexesWithSubcomplex));
+        if (!complexesAcsToCheckAsSubcomplexes.isEmpty()) {
+            Collection<IntactComplex> complexesWithSubcomplex = findComplexesWithSubComplexes(complexesAcsToCheckAsSubcomplexes);
+            if (!complexesWithSubcomplex.isEmpty()) {
+                complexesWithAllMatchingOrthologs.addAll(findAllComplexesWithAllOrthologsMatching(
+                        taxId,
+                        orthologIds,
+                        complexesWithSubcomplex));
+            }
         }
 
         return complexesWithAllMatchingOrthologs;
