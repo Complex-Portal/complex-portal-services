@@ -10,11 +10,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.ModelledComparableParticipant;
+import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.utils.CvTermUtils;
 import psidev.psi.mi.jami.utils.XrefUtils;
 import psidev.psi.mi.jami.utils.comparator.CollectionComparator;
 import psidev.psi.mi.jami.utils.comparator.participant.ModelledComparableParticipantComparator;
 import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
+import uk.ac.ebi.complex.service.batch.manager.ComplexManager;
 import uk.ac.ebi.complex.service.pdb.model.AssemblyEntry;
 import uk.ac.ebi.complex.service.pdb.model.ComplexWithAssemblies;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
@@ -38,9 +40,6 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, ItemStream {
-
-    private static final String WWPDB_DB_MI = "MI:0805";
-    private static final String WWPDB_DB_NAME = "wwpdb";
 
     private final IntactDao intactDao;
     private final ComplexService complexService;
@@ -91,8 +90,11 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                     return new ComplexWithAssemblies(complexAc, assembliesForComplex);
                 }
 
-                if (!XrefUtils.collectAllXrefsHavingDatabase(intactComplex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty() ||
-                        !XrefUtils.collectAllXrefsHavingDatabase(intactComplex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty()) {
+                Collection<Xref> pdbIdentifiers = XrefUtils.collectAllXrefsHavingDatabase(
+                        intactComplex.getIdentifiers(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME);
+                Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(
+                        intactComplex.getXrefs(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME);
+                if (!pdbIdentifiers.isEmpty() || !pdbXrefs.isEmpty()) {
                     return new ComplexWithAssemblies(complexAc, new HashSet<>());
                 }
             }

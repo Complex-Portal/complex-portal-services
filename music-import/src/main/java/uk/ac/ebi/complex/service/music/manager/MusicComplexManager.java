@@ -31,8 +31,6 @@ import java.util.List;
 @SuperBuilder
 public class MusicComplexManager extends ComplexManager<Double, MusicComplexToImport> {
 
-    private static final String AUTHOR_CONFIDENCE_TOPIC_ID = "MI:0621";
-    private static final String ML_ECO_CODE = "ECO:0008004";
     private static final String CLO_DATABASE_ID = "MI:2415";
     public static final String MUSIC_DATABASE_ID = "IA:3605";
     private static final String MUSIC_INSTITUION_ID = "IA:3605";
@@ -97,10 +95,12 @@ public class MusicComplexManager extends ComplexManager<Double, MusicComplexToIm
         }
 
         if (musicImportAppProperties.getPublicationId() != null && !musicImportAppProperties.getPublicationId().isEmpty()) {
-            return doesComplexNeedXref(musicImportAppProperties.getPublicationId(), existingComplex, Xref.PUBMED_MI, Xref.SEE_ALSO_MI);
+            if (doesComplexNeedXref(musicImportAppProperties.getPublicationId(), existingComplex, Xref.PUBMED_MI, Xref.SEE_ALSO_MI)) {
+                return true;
+            }
         }
 
-        return false;
+        return doesComplexEcoCodeNeedUpdating(existingComplex);
     }
 
     @Override
@@ -111,14 +111,6 @@ public class MusicComplexManager extends ComplexManager<Double, MusicComplexToIm
     @Override
     public boolean doesComplexNeedComplexClusterXref(MusicComplexToImport newComplex, IntactComplex existingComplex) {
         return doesComplexNeedXref(newComplex, existingComplex, MUSIC_DATABASE_ID, COMPLEX_CLUSTER_QUALIFIER_MI);
-    }
-
-    @Override
-    protected void setComplexEvidenceType(IntactComplex complex) throws CvTermNotFoundException {
-        // At the moment we are using ECO code ECO:0008004.
-        // Later on we need to add support for ECO:0007653, when we import data also from ProteomeHD
-        IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
-        complex.setEvidenceType(evidenceType);
     }
 
     @Override

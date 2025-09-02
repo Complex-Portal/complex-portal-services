@@ -6,7 +6,6 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.ModelledComparableParticipant;
-import psidev.psi.mi.jami.model.ModelledInteraction;
 import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.model.impl.DefaultCvTerm;
 import psidev.psi.mi.jami.model.impl.DefaultXref;
@@ -14,6 +13,7 @@ import psidev.psi.mi.jami.utils.CvTermUtils;
 import psidev.psi.mi.jami.utils.XrefUtils;
 import psidev.psi.mi.jami.utils.comparator.CollectionComparator;
 import psidev.psi.mi.jami.utils.comparator.participant.ModelledComparableParticipantComparator;
+import uk.ac.ebi.complex.service.batch.manager.ComplexManager;
 import uk.ac.ebi.complex.service.batch.processor.AbstractBatchProcessor;
 import uk.ac.ebi.complex.service.pdb.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.pdb.logging.ProcessReportWriter;
@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -42,8 +41,6 @@ import java.util.stream.Collectors;
 @SuperBuilder
 public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAssemblies, ComplexWithAssemblyXrefs> {
 
-    private static final String WWPDB_DB_MI = "MI:0805";
-    private static final String WWPDB_DB_NAME = "wwpdb";
     private static final String EXP_EVIDENCE = "exp-evidence";
 
     private static final String ML_ECO_CODE = "ECO:0008004";
@@ -69,8 +66,10 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
         try {
             IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
             List<Xref> pdbXrefs = new ArrayList<>();
-            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME));
-            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(complex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME));
+            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(
+                    complex.getIdentifiers(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME));
+            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(
+                    complex.getXrefs(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME));
 
             List<String> xrefsToAdd = new ArrayList<>();
             List<InteractorXref> xrefsToRemove = new ArrayList<>();
@@ -151,14 +150,9 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             }
 
             if (complex.isPredictedComplex()) {
-                if (matchesFound.isEmpty()) {
-                    if (!complex.getEvidenceType().getMIIdentifier().equals(ML_ECO_CODE)) {
-                        ecoCodeChangesReportWriter.write(item.getComplexId(), complex.getEvidenceType().getMIIdentifier(), ML_ECO_CODE);
-                    }
-                } else {
-                    if (!complex.getEvidenceType().getMIIdentifier().equals(COMP_EVIDENCE_ECO_CODE)) {
-                        ecoCodeChangesReportWriter.write(item.getComplexId(), complex.getEvidenceType().getMIIdentifier(), COMP_EVIDENCE_ECO_CODE);
-                    }
+                String expectedEcoCode = matchesFound.isEmpty() ? ComplexManager.ML_ECO_CODE : ComplexManager.COMP_EVIDENCE_ECO_CODE;
+                if (!complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode)) {
+                    ecoCodeChangesReportWriter.write(item.getComplexId(), complex.getEvidenceType().getMIIdentifier(), expectedEcoCode);
                 }
             }
 

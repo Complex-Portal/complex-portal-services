@@ -6,8 +6,8 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Xref;
-import psidev.psi.mi.jami.utils.XrefUtils;
 import uk.ac.ebi.complex.service.batch.exception.CvTermNotFoundException;
+import uk.ac.ebi.complex.service.batch.manager.ComplexManager;
 import uk.ac.ebi.complex.service.batch.writer.AbstractBatchWriter;
 import uk.ac.ebi.complex.service.pdb.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.pdb.model.ComplexWithAssemblyXrefs;
@@ -27,12 +27,6 @@ import java.util.Map;
 @Log4j
 @SuperBuilder
 public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssemblyXrefs, Complex> {
-
-    private static final String WWPDB_DB_MI = "MI:0805";
-    private static final String WWPDB_DB_NAME = "wwpdb";
-
-    private static final String ML_ECO_CODE = "ECO:0008004";
-    private static final String COMP_EVIDENCE_ECO_CODE = "ECO:0007653";
 
     private final IntactDao intactDao;
 
@@ -84,21 +78,13 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
                         addNewXref(complex, xrefToAdd);
                     }
 
-                    if (complex.isPredictedComplex()) {
-                        Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME);
-                        if (pdbXrefs.isEmpty()) {
-                            if (!complex.getEvidenceType().getMIIdentifier().equals(ML_ECO_CODE)) {
-                                IntactCvTerm newEvidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
-                                complex.setEvidenceType(newEvidenceType);
-                            }
-                        } else {
-                            if (!complex.getEvidenceType().getMIIdentifier().equals(COMP_EVIDENCE_ECO_CODE)) {
-                                IntactCvTerm newEvidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, COMP_EVIDENCE_ECO_CODE);
-                                complex.setEvidenceType(newEvidenceType);
-                            }
+                    String expectedEcoCode = ComplexManager.getEcoCodeExpectedForComplex(complex);
+                    if (expectedEcoCode != null) {
+                        if (!complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode)) {
+                            IntactCvTerm newEvidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, expectedEcoCode);
+                            complex.setEvidenceType(newEvidenceType);
                         }
                     }
-
                 } catch (Exception e) {
                     log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
                     errorReportWriter.write(item.getComplexId(), e.getMessage());
@@ -126,7 +112,7 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
     }
 
     private void addNewXref(IntactComplex complex, String xrefToAdd) throws CvTermNotFoundException {
-        IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, WWPDB_DB_MI);
+        IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ComplexManager.WWPDB_DB_MI);
         IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
         InteractorXref newXref = new InteractorXref(database, xrefToAdd, qualifier);
         complex.getIdentifiers().add(newXref);

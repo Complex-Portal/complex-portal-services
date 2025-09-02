@@ -12,6 +12,7 @@ import psidev.psi.mi.jami.model.CvTerm;
 import psidev.psi.mi.jami.model.Entity;
 import psidev.psi.mi.jami.model.Protein;
 import psidev.psi.mi.jami.model.Xref;
+import psidev.psi.mi.jami.utils.XrefUtils;
 import uk.ac.ebi.complex.service.batch.config.AppProperties;
 import uk.ac.ebi.complex.service.batch.exception.CvTermNotFoundException;
 import uk.ac.ebi.complex.service.batch.exception.OrganismNotFoundException;
@@ -63,6 +64,12 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     public static final String COMPLEX_CLUSTER_QUALIFIER = "complex-cluster";
     public static final String COMPLEX_CLUSTER_QUALIFIER_MI = "MI:2427";
 
+    public static final String WWPDB_DB_MI = "MI:0805";
+    public static final String WWPDB_DB_NAME = "wwpdb";
+
+    public static final String ML_ECO_CODE = "ECO:0008004";
+    public static final String COMP_EVIDENCE_ECO_CODE = "ECO:0007653";
+
     private final IntactDao intactDao;
     private final UniprotProteinFetcher uniprotProteinFetcher;
     private final AppProperties appProperties;
@@ -72,6 +79,18 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     private final Map<String, IntactProtein> proteinMap = new HashMap<>();
     private final Map<String, User> userMap = new HashMap<>();
     private final Map<Integer, IntactOrganism> organismMap = new HashMap<>();
+
+    public static String getEcoCodeExpectedForComplex(IntactComplex complex) {
+        if (complex.isPredictedComplex()) {
+            Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME);
+            if (pdbXrefs.isEmpty()) {
+                return ML_ECO_CODE;
+            } else {
+                return COMP_EVIDENCE_ECO_CODE;
+            }
+        }
+        return null;
+    }
 
     public abstract boolean doesComplexHasIdentityXref(R newComplex, IntactComplex existingComplex);
 
@@ -88,6 +107,7 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     public IntactComplex mergeComplexWithExistingComplex(R newComplex, IntactComplex existingComplex) throws CvTermNotFoundException {
         addIdentityXrefs(newComplex, existingComplex);
         addConfidenceAnnotation(newComplex, existingComplex);
+        setComplexEvidenceType(existingComplex);
         return existingComplex;
     }
 
@@ -101,6 +121,7 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         setOrganism(complex);
         setComplexSource(complex);
         setComplexType(complex);
+        complex.setPredictedComplex(true);
         setComplexEvidenceType(complex);
         addIdentityXrefs(newComplex, complex);
         addConfidenceAnnotation(newComplex, complex);
@@ -108,11 +129,18 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
         setComplexSystematicName(complex);
         setComplexStatus(complex);
         setExperimentAndPublication(complex);
-        complex.setPredictedComplex(true);
         complex.setCreatedDate(new Date());
         complex.setUpdatedDate(complex.getCreatedDate());
 
         return complex;
+    }
+
+    protected boolean doesComplexEcoCodeNeedUpdating(IntactComplex complex) {
+        String expectedEcoCode = getEcoCodeExpectedForComplex(complex);
+        if (expectedEcoCode != null) {
+            return !complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode);
+        }
+        return false;
     }
 
     protected boolean doesComplexNeedXref(R newComplex, IntactComplex existingComplex, String databaseMi, String qualifierMi) {
@@ -181,7 +209,15 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
                 .collect(Collectors.toList());
     }
 
-    protected abstract void setComplexEvidenceType(IntactComplex complex) throws CvTermNotFoundException;
+    protected void setComplexEvidenceType(IntactComplex complex) throws CvTermNotFoundException {
+        String expectedEcoCode = getEcoCodeExpectedForComplex(complex);
+        if (expectedEcoCode != null) {
+            if (complex.getEvidenceType() == null || !complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode)) {
+                IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, expectedEcoCode);
+                complex.setEvidenceType(evidenceType);
+            }
+        }
+    }
 
     protected abstract void addIdentityXrefs(R newComplex, IntactComplex existingComplex) throws CvTermNotFoundException;
 
