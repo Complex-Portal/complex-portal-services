@@ -18,6 +18,8 @@ public class ProcessReportWriter extends ReportWriter {
             "complex_id", "assemblies_from_pdb", "xrefs_to_update" };
     public static final String[] COMPLEXES_WITH_XREFS_TO_REVIEW = new String[]{
             "complex_id", "assemblies_from_pdb", "complex_pdb_xrefs" };
+    public static final String[] ECO_CODE_CHANGE_HEADER_LINE = new String[]{
+            "complex_id", "current_eco_code", "new_eco_code" };
 
     public ProcessReportWriter(File outputFile, String separator, boolean header, String[] headerline) throws IOException {
         super(outputFile, separator, header, headerline);
@@ -42,6 +44,14 @@ public class ProcessReportWriter extends ReportWriter {
                 String.join(" ", assemblies),
                 String.join(" ", xrefs)
         });
+        flush();
+    }
+
+    public void write(String complexId,
+                      String currentEcoCode,
+                      String newEcoCode) throws IOException {
+
+        writeLine(new String[]{ complexId, currentEcoCode, newEcoCode });
         flush();
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Xref;
+import psidev.psi.mi.jami.utils.XrefUtils;
 import uk.ac.ebi.complex.service.batch.exception.CvTermNotFoundException;
 import uk.ac.ebi.complex.service.batch.writer.AbstractBatchWriter;
 import uk.ac.ebi.complex.service.pdb.logging.ErrorsReportWriter;
@@ -28,6 +29,10 @@ import java.util.Map;
 public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssemblyXrefs, Complex> {
 
     private static final String WWPDB_DB_MI = "MI:0805";
+    private static final String WWPDB_DB_NAME = "wwpdb";
+
+    private static final String ML_ECO_CODE = "ECO:0008004";
+    private static final String COMP_EVIDENCE_ECO_CODE = "ECO:0007653";
 
     private final IntactDao intactDao;
 
@@ -62,28 +67,44 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
 
     @Override
     public void write(List<? extends ComplexWithAssemblyXrefs> items) throws Exception {
-        Map<String, IntactComplex> complexesToSave = new HashMap<>();
-        for (ComplexWithAssemblyXrefs item: items) {
-            IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
-            try {
-                for (InteractorXref xrefToRemove: item.getXrefsToRemove()) {
-                    removeXref(complex.getIdentifiers(), xrefToRemove);
-                    removeXref(complex.getXrefs(), xrefToRemove);
-                }
-                for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
-                    updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
-                    updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
-                }
-                for (String xrefToAdd: item.getXrefsToAdd()) {
-                    addNewXref(complex, xrefToAdd);
-                }
-            } catch (Exception e) {
-                log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
-                errorReportWriter.write(item.getComplexId(), e.getMessage());
-            }
-        }
-
         if (!appProperties.isDryRunMode()) {
+            Map<String, IntactComplex> complexesToSave = new HashMap<>();
+            for (ComplexWithAssemblyXrefs item: items) {
+                IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
+                try {
+                    for (InteractorXref xrefToRemove: item.getXrefsToRemove()) {
+                        removeXref(complex.getIdentifiers(), xrefToRemove);
+                        removeXref(complex.getXrefs(), xrefToRemove);
+                    }
+                    for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
+                        updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
+                        updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
+                    }
+                    for (String xrefToAdd: item.getXrefsToAdd()) {
+                        addNewXref(complex, xrefToAdd);
+                    }
+
+                    if (complex.isPredictedComplex()) {
+                        Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME);
+                        if (pdbXrefs.isEmpty()) {
+                            if (!complex.getEvidenceType().getMIIdentifier().equals(ML_ECO_CODE)) {
+                                IntactCvTerm newEvidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
+                                complex.setEvidenceType(newEvidenceType);
+                            }
+                        } else {
+                            if (!complex.getEvidenceType().getMIIdentifier().equals(COMP_EVIDENCE_ECO_CODE)) {
+                                IntactCvTerm newEvidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, COMP_EVIDENCE_ECO_CODE);
+                                complex.setEvidenceType(newEvidenceType);
+                            }
+                        }
+                    }
+
+                } catch (Exception e) {
+                    log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
+                    errorReportWriter.write(item.getComplexId(), e.getMessage());
+                }
+            }
+
             this.intactService.saveOrUpdate(complexesToSave.values());
         }
     }

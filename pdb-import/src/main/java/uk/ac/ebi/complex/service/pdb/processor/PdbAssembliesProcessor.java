@@ -6,6 +6,7 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.ModelledComparableParticipant;
+import psidev.psi.mi.jami.model.ModelledInteraction;
 import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.model.impl.DefaultCvTerm;
 import psidev.psi.mi.jami.model.impl.DefaultXref;
@@ -33,6 +34,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,6 +46,9 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
     private static final String WWPDB_DB_NAME = "wwpdb";
     private static final String EXP_EVIDENCE = "exp-evidence";
 
+    private static final String ML_ECO_CODE = "ECO:0008004";
+    private static final String COMP_EVIDENCE_ECO_CODE = "ECO:0007653";
+
     private final IntactDao intactDao;
     private final PdbAssembliesFileReader pdbAssembliesFileReader;
 
@@ -52,6 +57,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
     private ProcessReportWriter complexesWithExtraAssembliesReportWriter;
     private ProcessReportWriter complexesWithXrefsToUpdateReportWriter;
     private ProcessReportWriter complexesWithXrefsToReviewReportWriter;
+    private ProcessReportWriter ecoCodeChangesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
     private CollectionComparator<ModelledComparableParticipant> comparableParticipantsComparator;
@@ -142,6 +148,18 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                         pdbXrefs.stream()
                                 .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
                                 .collect(Collectors.toList()));
+            }
+
+            if (complex.isPredictedComplex()) {
+                if (matchesFound.isEmpty()) {
+                    if (!complex.getEvidenceType().getMIIdentifier().equals(ML_ECO_CODE)) {
+                        ecoCodeChangesReportWriter.write(item.getComplexId(), complex.getEvidenceType().getMIIdentifier(), ML_ECO_CODE);
+                    }
+                } else {
+                    if (!complex.getEvidenceType().getMIIdentifier().equals(COMP_EVIDENCE_ECO_CODE)) {
+                        ecoCodeChangesReportWriter.write(item.getComplexId(), complex.getEvidenceType().getMIIdentifier(), COMP_EVIDENCE_ECO_CODE);
+                    }
+                }
             }
 
             return new ComplexWithAssemblyXrefs(
@@ -289,6 +307,8 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                 new File(reportDirectory, "complexes_with_xrefs_to_update" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_UPDATE);
         this.complexesWithXrefsToReviewReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "complexes_with_xrefs_to_review" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_XREFS_TO_REVIEW);
+        this.ecoCodeChangesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "complexes_with_eco_codes_to_update" + extension), sep, header, ProcessReportWriter.ECO_CODE_CHANGE_HEADER_LINE);
         this.errorReportWriter = new ErrorsReportWriter(
                 new File(reportDirectory, "process_errors" + extension), sep, header);
     }
