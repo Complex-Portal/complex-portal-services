@@ -34,8 +34,6 @@ public class ComplexOrthologsProcessor implements ItemProcessor<IntactComplex, C
             LifeCycleStatus.RELEASED);
 
     private static final String GO_MI_REF = "MI:0448";
-    private static final String MOLECULAR_FUNCTION_QUALIFIER_NAME = "molecular function";
-    private static final String BIOLOGICAL_PROCESS_QUALIFIER_NAME = "biological process";
     private static final String CELLULAR_COMPONENT_QUALIFIER_NAME = "cellular component";
 
     private final ComplexOrthologFinder complexOrthologFinder;
@@ -86,8 +84,7 @@ public class ComplexOrthologsProcessor implements ItemProcessor<IntactComplex, C
         return ComplexOrthologs.ComplexWithXrefs.builder()
                 .complexId(complex.getComplexAc())
                 .complexName(getComplexName(complex))
-//                .molecularFunctions(filterXrefsWithQualifierFullName(goXrefs, MOLECULAR_FUNCTION_QUALIFIER_NAME))
-//                .biologicalProcesses(filterXrefsWithQualifierFullName(goXrefs, BIOLOGICAL_PROCESS_QUALIFIER_NAME))
+                .predicted(complex.isPredictedComplex())
                 .cellularComponents(filterXrefsWithQualifierFullName(goXrefs, CELLULAR_COMPONENT_QUALIFIER_NAME))
                 .build();
     }

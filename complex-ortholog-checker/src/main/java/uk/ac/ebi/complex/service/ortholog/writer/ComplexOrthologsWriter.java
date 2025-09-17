@@ -22,7 +22,8 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
     protected final FileConfiguration fileConfiguration;
 
     private ReportWriter complexesWithNoOrthologs;
-    private ReportWriter complexesWithOrthologs;
+    private ReportWriter complexesWithOrthologsDifferentCellularComponents;
+    private ReportWriter complexesWithOrthologsSameCellularComponents;
 
     @Override
     public void write(List<? extends ComplexOrthologs> items) {
@@ -31,26 +32,35 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
                 complexesWithNoOrthologs.writeLine(new String[]{
                         item.getInputComplex().getComplexId(),
                         prepareString(item.getInputComplex().getComplexName()),
-//                        String.join("|", item.getInputComplex().getMolecularFunctions()),
-//                        String.join("|", item.getInputComplex().getBiologicalProcesses()),
+                        String.valueOf(item.getInputComplex().isPredicted()),
                         String.join("|", item.getInputComplex().getCellularComponents())
                 });
             } else {
                 for (ComplexOrthologs.ComplexWithXrefs complexWithXref : item.getOutputComplexes()) {
-                    complexesWithOrthologs.writeLine(new String[]{
-                            item.getInputComplex().getComplexId(),
-                            prepareString(item.getInputComplex().getComplexName()),
-//                            String.join("|", item.getInputComplex().getMolecularFunctions()),
-//                            String.join("|", item.getInputComplex().getBiologicalProcesses()),
-                            String.join("|", item.getInputComplex().getCellularComponents()),
-                            complexWithXref.getComplexId(),
-                            prepareString(complexWithXref.getComplexName()),
-//                            String.join("|", complexWithXref.getMolecularFunctions()),
-//                            String.join("|", complexWithXref.getBiologicalProcesses()),
-                            String.join("|", complexWithXref.getCellularComponents())
-                    });
+                    if (doComplexesHaveCommonCellularComponent(item.getInputComplex(), complexWithXref)) {
+                        complexesWithOrthologsSameCellularComponents.writeLine(new String[]{
+                                item.getInputComplex().getComplexId(),
+                                prepareString(item.getInputComplex().getComplexName()),
+                                String.valueOf(item.getInputComplex().isPredicted()),
+                                String.join("|", item.getInputComplex().getCellularComponents()),
+                                complexWithXref.getComplexId(),
+                                prepareString(complexWithXref.getComplexName()),
+                                String.valueOf(complexWithXref.isPredicted()),
+                                String.join("|", complexWithXref.getCellularComponents())
+                        });
+                    } else {
+                        complexesWithOrthologsDifferentCellularComponents.writeLine(new String[]{
+                                item.getInputComplex().getComplexId(),
+                                prepareString(item.getInputComplex().getComplexName()),
+                                String.valueOf(item.getInputComplex().isPredicted()),
+                                String.join("|", item.getInputComplex().getCellularComponents()),
+                                complexWithXref.getComplexId(),
+                                prepareString(complexWithXref.getComplexName()),
+                                String.valueOf(complexWithXref.isPredicted()),
+                                String.join("|", complexWithXref.getCellularComponents())
+                        });
+                    }
                 }
-
             }
         }
     }
@@ -70,7 +80,8 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
         Assert.notNull(executionContext, "ExecutionContext must not be null");
         try {
             this.complexesWithNoOrthologs.flush();
-            this.complexesWithOrthologs.flush();
+            this.complexesWithOrthologsDifferentCellularComponents.flush();
+            this.complexesWithOrthologsSameCellularComponents.flush();
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be flushed", e);
         }
@@ -81,8 +92,10 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
         try {
             this.complexesWithNoOrthologs.flush();
             this.complexesWithNoOrthologs.close();
-            this.complexesWithOrthologs.flush();
-            this.complexesWithOrthologs.close();
+            this.complexesWithOrthologsDifferentCellularComponents.flush();
+            this.complexesWithOrthologsDifferentCellularComponents.close();
+            this.complexesWithOrthologsSameCellularComponents.flush();
+            this.complexesWithOrthologsSameCellularComponents.close();
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be closed", e);
         }
@@ -105,23 +118,43 @@ public class ComplexOrthologsWriter implements ItemWriter<ComplexOrthologs>, Ite
         this.complexesWithNoOrthologs = new ReportWriter(noOrthologsFile, separator, header, new String[]{
                 "complex_id",
                 "complex_name",
-//                "molecular_functions",
-//                "biological_processes",
+                "is_predicted",
                 "cellular_components"
         });
-        File withOrthologsFile = new File(reportDirectory, "with_orthologs" + extension);
-        this.complexesWithOrthologs = new ReportWriter(withOrthologsFile, separator, header, new String[]{
+        File withOrthologsDifferentCellularComponentFile = new File(reportDirectory, "with_orthologs_different_cellular_components" + extension);
+        this.complexesWithOrthologsDifferentCellularComponents = new ReportWriter(withOrthologsDifferentCellularComponentFile, separator, header, new String[]{
                 "complex_id",
                 "complex_name",
-//                "molecular_functions",
-//                "biological_processes",
+                "is_predicted",
                 "cellular_components",
                 "ortholog_complex_id",
                 "ortholog_complex_name",
-//                "ortholog_molecular_functions",
-//                "ortholog_biological_processes",
+                "ortholog_is_predicted",
                 "ortholog_cellular_components"
         });
+        File withOrthologsSameCellularComponentsFile = new File(reportDirectory, "with_orthologs_same_cellular_components" + extension);
+        this.complexesWithOrthologsSameCellularComponents = new ReportWriter(withOrthologsSameCellularComponentsFile, separator, header, new String[]{
+                "complex_id",
+                "complex_name",
+                "is_predicted",
+                "cellular_components",
+                "ortholog_complex_id",
+                "ortholog_complex_name",
+                "ortholog_is_predicted",
+                "ortholog_cellular_components"
+        });
+    }
+
+    private boolean doComplexesHaveCommonCellularComponent(
+            ComplexOrthologs.ComplexWithXrefs complexA,
+            ComplexOrthologs.ComplexWithXrefs complexB) {
+
+        if (complexA.getCellularComponents().isEmpty() || complexB.getCellularComponents().isEmpty()) {
+            return false;
+        }
+
+        return complexA.getCellularComponents().stream()
+                .anyMatch(cellularComponent -> complexB.getCellularComponents().contains(cellularComponent));
     }
 
     private String prepareString(String value) {
