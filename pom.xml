@@ -13,13 +13,13 @@
 
     <groupId>uk.ac.ebi.complex.portal</groupId>
     <artifactId>complex-services-master</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>1.4.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Complex Services</name>
 
     <properties>
-        <psi.jami.version>3.8.0-SNAPSHOT</psi.jami.version>
+        <psi.jami.version>3.9.0-SNAPSHOT</psi.jami.version>
         <intact.jami.version>3.2.2-SNAPSHOT</intact.jami.version>
         <spring.version>4.3.30.RELEASE</spring.version>
         <lombok.version>1.18.28</lombok.version>
