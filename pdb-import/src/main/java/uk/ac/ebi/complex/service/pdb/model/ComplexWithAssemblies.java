@@ -11,6 +11,7 @@ import java.util.Collection;
 @NoArgsConstructor
 public class ComplexWithAssemblies {
     private String complexId;
+    private boolean predicted;
     private Collection<String> assembliesFromFile;
 //    private Collection<String> assembliesWithSameProteins;
 }

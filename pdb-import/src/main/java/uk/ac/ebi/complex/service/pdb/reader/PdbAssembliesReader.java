@@ -87,7 +87,7 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                 }
 
                 if (!assembliesForComplex.isEmpty()) {
-                    return new ComplexWithAssemblies(complexAc, assembliesForComplex);
+                    return new ComplexWithAssemblies(complexAc, intactComplex.isPredictedComplex(), assembliesForComplex);
                 }
 
                 Collection<Xref> pdbIdentifiers = XrefUtils.collectAllXrefsHavingDatabase(
@@ -95,7 +95,7 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                 Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(
                         intactComplex.getXrefs(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME);
                 if (!pdbIdentifiers.isEmpty() || !pdbXrefs.isEmpty()) {
-                    return new ComplexWithAssemblies(complexAc, new HashSet<>());
+                    return new ComplexWithAssemblies(complexAc, intactComplex.isPredictedComplex(), new HashSet<>());
                 }
             }
         }
