@@ -86,7 +86,8 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             Set<String> assembliesToCheck = new HashSet<>();
             for (AssemblyEntry assemblyEntry : assemblies) {
                 Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
-                        .filter(protein -> protein.getOrganism() == complex.getOrganism().getTaxId())
+                        .filter(protein ->
+                                protein.getOrganism() == null || protein.getOrganism() == complex.getOrganism().getTaxId())
                         .map(protein -> new ModelledComparableParticipant(
                                 protein.getProteinAc(),
                                 List.of(new DefaultXref(
@@ -151,7 +152,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
 
             if (complex.isPredictedComplex()) {
                 String expectedEcoCode = matchesFound.isEmpty() ? ComplexManager.ML_ECO_CODE : ComplexManager.COMP_EVIDENCE_ECO_CODE;
-                if (!complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode)) {
+                if (complex.getEvidenceType().getIdentifiers().stream().anyMatch(xref -> xref.getId().equals(expectedEcoCode))) {
                     ecoCodeChangesReportWriter.write(item.getComplexId(), complex.getEvidenceType().getMIIdentifier(), expectedEcoCode);
                 }
             }
