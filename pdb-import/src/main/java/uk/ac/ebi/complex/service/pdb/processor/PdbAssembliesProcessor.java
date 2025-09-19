@@ -152,8 +152,12 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
 
             if (complex.isPredictedComplex()) {
                 String expectedEcoCode = matchesFound.isEmpty() ? ComplexManager.ML_ECO_CODE : ComplexManager.COMP_EVIDENCE_ECO_CODE;
-                if (complex.getEvidenceType().getIdentifiers().stream().anyMatch(xref -> xref.getId().equals(expectedEcoCode))) {
-                    ecoCodeChangesReportWriter.write(item.getComplexId(), complex.getEvidenceType().getMIIdentifier(), expectedEcoCode);
+                Set<String> complexEcoCodes = XrefUtils.collectAllXrefsHavingDatabase(complex.getEvidenceType().getIdentifiers(), "MI:1331", "evidence ontology")
+                        .stream()
+                        .map(Xref::getId)
+                        .collect(Collectors.toSet());
+                if (!complexEcoCodes.contains(expectedEcoCode)) {
+                    ecoCodeChangesReportWriter.write(item.getComplexId(), String.join("|", complexEcoCodes), expectedEcoCode);
                 }
             }
 
