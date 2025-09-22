@@ -109,6 +109,8 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                         if (!assembliesToCheck.contains(xref.getId().toLowerCase())) {
                             if (Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
                                 if (item.getAssembliesWithSameProteins().contains(xref.getId().toLowerCase())) {
+                                    matchesFound.add(((InteractorXref) xref).getAc());
+                                } else {
                                     // Xref does not match any PDB assembly, we delete it as it has identity qualifier
                                     xrefsToRemove.add((InteractorXref) xref);
                                 }
