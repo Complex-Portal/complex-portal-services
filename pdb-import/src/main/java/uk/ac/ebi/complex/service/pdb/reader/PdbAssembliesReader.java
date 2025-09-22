@@ -73,16 +73,19 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                         }
                     }
 
-                    Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
-                            .map(protein -> new ModelledComparableParticipant(
-                                    protein.getProteinAc(),
-                                    List.of(),
-                                    1,
-                                    CvTermUtils.createProteinInteractorType()))
-                            .collect(Collectors.toList());
+                    // Only add the assemblies from comparison for predicted complexes
+                    if (intactComplex.isPredictedComplex()) {
+                        Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
+                                .map(protein -> new ModelledComparableParticipant(
+                                        protein.getProteinAc(),
+                                        List.of(),
+                                        1,
+                                        CvTermUtils.createProteinInteractorType()))
+                                .collect(Collectors.toList());
 
-                    if (this.comparableParticipantsComparator.compare(complexProteins, assemblyProteins) == 0) {
-                        assembliesForComplex.addAll(assemblyEntry.getAssemblies());
+                        if (this.comparableParticipantsComparator.compare(complexProteins, assemblyProteins) == 0) {
+                            assembliesForComplex.addAll(assemblyEntry.getAssemblies());
+                        }
                     }
                 }
 
