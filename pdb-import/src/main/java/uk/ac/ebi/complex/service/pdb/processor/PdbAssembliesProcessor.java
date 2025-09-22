@@ -99,7 +99,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                         .collect(Collectors.toList());
 
                 if (this.comparableParticipantsComparator.compare(complexProteins, assemblyProteins) == 0) {
-                    assembliesToCheck.addAll(assemblyEntry.getAssemblies());
+                    assemblyEntry.getAssemblies().forEach(assembly -> assembliesToCheck.add(assembly.toLowerCase()));
                 }
             }
 
@@ -108,8 +108,10 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                     if (!matchesFound.contains(((InteractorXref) xref).getAc())) {
                         if (!assembliesToCheck.contains(xref.getId().toLowerCase())) {
                             if (Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
-                                // Xref does not match any PDB assembly, we delete it as it has identity qualifier
-                                xrefsToRemove.add((InteractorXref) xref);
+                                if (item.getAssembliesWithSameProteins().contains(xref.getId().toLowerCase())) {
+                                    // Xref does not match any PDB assembly, we delete it as it has identity qualifier
+                                    xrefsToRemove.add((InteractorXref) xref);
+                                }
                             } else if (EXP_EVIDENCE.equals(xref.getQualifier().getShortName())) {
                                 xrefsToReview.add((InteractorXref) xref);
                             }

@@ -65,16 +65,20 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
 
                 Collection<ModelledComparableParticipant> complexProteins = getProteinComponents(intactComplex, proteinCacheMap);
 
-                Set<String> assembliesForComplex = new HashSet<>();
+                Set<String> assembliesFromFile = new HashSet<>();
+                Set<String> assembliesFromProteins = new HashSet<>();
                 for (AssemblyEntry assemblyEntry : assemblies) {
+
+                    boolean foundInFile = false;
+
                     for (String complexId : assemblyEntry.getComplexIds()) {
                         if (complexId.equals(complexAc)) {
-                            assembliesForComplex.addAll(assemblyEntry.getAssemblies());
+                            assembliesFromFile.addAll(assemblyEntry.getAssemblies());
+                            foundInFile = true;
                         }
                     }
 
-                    // Only add the assemblies from comparison for predicted complexes
-                    if (intactComplex.isPredictedComplex()) {
+                    if (!foundInFile) {
                         Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
                                 .map(protein -> new ModelledComparableParticipant(
                                         protein.getProteinAc(),
@@ -84,13 +88,18 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                                 .collect(Collectors.toList());
 
                         if (this.comparableParticipantsComparator.compare(complexProteins, assemblyProteins) == 0) {
-                            assembliesForComplex.addAll(assemblyEntry.getAssemblies());
+                            assemblyEntry.getAssemblies().forEach(assembly -> assembliesFromProteins.add(assembly.toLowerCase()));
                         }
                     }
                 }
 
-                if (!assembliesForComplex.isEmpty()) {
-                    return new ComplexWithAssemblies(complexAc, intactComplex.isPredictedComplex(), assembliesForComplex);
+                if (!assembliesFromFile.isEmpty() || !assembliesFromProteins.isEmpty()) {
+                    return ComplexWithAssemblies.builder()
+                            .complexId(complexAc)
+                            .predicted(intactComplex.isPredictedComplex())
+                            .assembliesFromFile(assembliesFromFile)
+                            .assembliesWithSameProteins(assembliesFromProteins)
+                            .build();
                 }
 
                 Collection<Xref> pdbIdentifiers = XrefUtils.collectAllXrefsHavingDatabase(
@@ -98,7 +107,12 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                 Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(
                         intactComplex.getXrefs(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME);
                 if (!pdbIdentifiers.isEmpty() || !pdbXrefs.isEmpty()) {
-                    return new ComplexWithAssemblies(complexAc, intactComplex.isPredictedComplex(), new HashSet<>());
+                    return ComplexWithAssemblies.builder()
+                            .complexId(complexAc)
+                            .predicted(intactComplex.isPredictedComplex())
+                            .assembliesFromFile(new HashSet<>())
+                            .assembliesWithSameProteins(new HashSet<>())
+                            .build();
                 }
             }
         }
