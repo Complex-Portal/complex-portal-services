@@ -78,7 +78,8 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                         }
                     }
 
-                    if (!foundInFile) {
+                    // For predicted complexes, also check if any assembly matches the proteins in the complex
+                    if (!foundInFile && intactComplex.isPredictedComplex()) {
                         Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
                                 .map(protein -> new ModelledComparableParticipant(
                                         protein.getProteinAc(),
