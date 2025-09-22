@@ -10,11 +10,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.ModelledComparableParticipant;
+import psidev.psi.mi.jami.model.Xref;
 import psidev.psi.mi.jami.utils.CvTermUtils;
 import psidev.psi.mi.jami.utils.XrefUtils;
 import psidev.psi.mi.jami.utils.comparator.CollectionComparator;
 import psidev.psi.mi.jami.utils.comparator.participant.ModelledComparableParticipantComparator;
 import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
+import uk.ac.ebi.complex.service.batch.manager.ComplexManager;
 import uk.ac.ebi.complex.service.pdb.model.AssemblyEntry;
 import uk.ac.ebi.complex.service.pdb.model.ComplexWithAssemblies;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
@@ -38,9 +40,6 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, ItemStream {
-
-    private static final String WWPDB_DB_MI = "MI:0805";
-    private static final String WWPDB_DB_NAME = "wwpdb";
 
     private final IntactDao intactDao;
     private final ComplexService complexService;
@@ -66,34 +65,53 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
 
                 Collection<ModelledComparableParticipant> complexProteins = getProteinComponents(intactComplex, proteinCacheMap);
 
-                Set<String> assembliesForComplex = new HashSet<>();
+                Set<String> assembliesFromFile = new HashSet<>();
+                Set<String> assembliesFromProteins = new HashSet<>();
                 for (AssemblyEntry assemblyEntry : assemblies) {
+
+                    boolean foundInFile = false;
+
                     for (String complexId : assemblyEntry.getComplexIds()) {
                         if (complexId.equals(complexAc)) {
-                            assembliesForComplex.addAll(assemblyEntry.getAssemblies());
+                            assembliesFromFile.addAll(assemblyEntry.getAssemblies());
+                            foundInFile = true;
                         }
                     }
 
-                    Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
-                            .map(protein -> new ModelledComparableParticipant(
-                                    protein.getProteinAc(),
-                                    List.of(),
-                                    1,
-                                    CvTermUtils.createProteinInteractorType()))
-                            .collect(Collectors.toList());
+                    // For predicted complexes, also check if any assembly matches the proteins in the complex
+                    if (!foundInFile && intactComplex.isPredictedComplex()) {
+                        Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
+                                .map(protein -> new ModelledComparableParticipant(
+                                        protein.getProteinAc(),
+                                        List.of(),
+                                        1,
+                                        CvTermUtils.createProteinInteractorType()))
+                                .collect(Collectors.toList());
 
-                    if (this.comparableParticipantsComparator.compare(complexProteins, assemblyProteins) == 0) {
-                        assembliesForComplex.addAll(assemblyEntry.getAssemblies());
+                        if (this.comparableParticipantsComparator.compare(complexProteins, assemblyProteins) == 0) {
+                            assemblyEntry.getAssemblies().forEach(assembly -> assembliesFromProteins.add(assembly.toLowerCase()));
+                        }
                     }
                 }
 
-                if (!assembliesForComplex.isEmpty()) {
-                    return new ComplexWithAssemblies(complexAc, assembliesForComplex);
+                if (!assembliesFromFile.isEmpty() || !assembliesFromProteins.isEmpty()) {
+                    return ComplexWithAssemblies.builder()
+                            .complexId(complexAc)
+                            .predicted(intactComplex.isPredictedComplex())
+                            .assembliesFromFile(assembliesFromFile)
+                            .build();
                 }
 
-                if (!XrefUtils.collectAllXrefsHavingDatabase(intactComplex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty() ||
-                        !XrefUtils.collectAllXrefsHavingDatabase(intactComplex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME).isEmpty()) {
-                    return new ComplexWithAssemblies(complexAc, new HashSet<>());
+                Collection<Xref> pdbIdentifiers = XrefUtils.collectAllXrefsHavingDatabase(
+                        intactComplex.getIdentifiers(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME);
+                Collection<Xref> pdbXrefs = XrefUtils.collectAllXrefsHavingDatabase(
+                        intactComplex.getXrefs(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME);
+                if (!pdbIdentifiers.isEmpty() || !pdbXrefs.isEmpty()) {
+                    return ComplexWithAssemblies.builder()
+                            .complexId(complexAc)
+                            .predicted(intactComplex.isPredictedComplex())
+                            .assembliesFromFile(new HashSet<>())
+                            .build();
                 }
             }
         }

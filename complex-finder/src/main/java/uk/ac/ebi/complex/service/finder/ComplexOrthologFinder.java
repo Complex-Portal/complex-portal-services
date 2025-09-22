@@ -1,6 +1,9 @@
 package uk.ac.ebi.complex.service.finder;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import psidev.psi.mi.jami.model.Interactor;
 import psidev.psi.mi.jami.model.ModelledParticipant;
 import psidev.psi.mi.jami.model.Xref;
@@ -23,10 +26,13 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ComplexOrthologFinder {
 
-    protected final static String ORTHOLOGY_MI = "MI:2426";
+    public static final String GO_MI_REF = "MI:0448";
+    public static final String CELLULAR_COMPONENT_MI_REF = "MI:0354";
+    protected static final String ORTHOLOGY_MI = "MI:2426";
+
     private final IntactDao intactDao;
 
-    public Collection<IntactComplex> findComplexOrthologs(String complexId, Integer taxId) {
+    public Collection<IntactComplex> findComplexOrthologs(String complexId, Integer taxId, Config config) {
         final IntactComplex complex;
         if (complexId.startsWith("CPX-")) {
             complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(complexId);
@@ -34,8 +40,14 @@ public class ComplexOrthologFinder {
             complex = intactDao.getComplexDao().getByAc(complexId);
         }
         Collection<String> proteinOrthologIds = getOrthologIds(complex);
+        Collection<String> cellularComponents = XrefUtils
+                .collectAllXrefsHavingDatabaseAndQualifier(
+                        complex.getXrefs(), GO_MI_REF, null, CELLULAR_COMPONENT_MI_REF, null)
+                .stream()
+                .map(Xref::getId)
+                .collect(Collectors.toList());
 
-        Collection<IntactComplex> complexes = findAllComplexesWithSameOrthologs(taxId, proteinOrthologIds);
+        Collection<IntactComplex> complexes = findAllComplexesWithSameOrthologs(config, taxId, proteinOrthologIds, cellularComponents);
         return complexes.stream()
                 .filter(complexMatch -> !complexMatch.getComplexAc().equals(complex.getComplexAc()))
                 .collect(Collectors.toList());
@@ -80,14 +92,21 @@ public class ComplexOrthologFinder {
         return proteinToOrthologsMap;
     }
 
-    private Collection<IntactComplex> findAllComplexesWithSameOrthologs(Integer taxId, Collection<String> orthologIds) {
+    private Collection<IntactComplex> findAllComplexesWithSameOrthologs(
+            Config config,
+            Integer taxId,
+            Collection<String> orthologIds,
+            Collection<String> cellularComponents) {
+
         Collection<IntactComplex> complexes = findComplexesWithSameOrthologs(orthologIds);
-        return findAllComplexesWithAllOrthologsMatching(taxId, orthologIds, complexes);
+        return findAllComplexesWithAllOrthologsMatching(config, taxId, orthologIds, cellularComponents, complexes);
     }
 
     private Collection<IntactComplex> findAllComplexesWithAllOrthologsMatching(
+            Config config,
             Integer taxId,
             Collection<String> orthologIds,
+            Collection<String> cellularComponents,
             Collection<IntactComplex> complexesPartiallyMatching) {
 
         List<IntactComplex> complexesWithAllMatchingOrthologs = new ArrayList<>();
@@ -98,7 +117,12 @@ public class ComplexOrthologFinder {
                 Collection<String> complexOrthologIds = getOrthologIds(complex);
                 if (!complexOrthologIds.isEmpty() && orthologIds.containsAll(complexOrthologIds)) {
                     if (complexOrthologIds.containsAll(orthologIds)) {
-                        complexesWithAllMatchingOrthologs.add(complex);
+                        if ((complex.isPredictedComplex() && !config.isCheckCellularComponentsForPredicted()) ||
+                                (!complex.isPredictedComplex() && !config.isCheckCellularComponentsForCurated())) {
+                            complexesWithAllMatchingOrthologs.add(complex);
+                        } else if (doComplexMatchCellularComponent(cellularComponents, complex)) {
+                            complexesWithAllMatchingOrthologs.add(complex);
+                        }
                     }
                     complexesAcsToCheckAsSubcomplexes.add(complex.getComplexAc());
                 }
@@ -109,8 +133,10 @@ public class ComplexOrthologFinder {
             Collection<IntactComplex> complexesWithSubcomplex = findComplexesWithSubComplexes(complexesAcsToCheckAsSubcomplexes);
             if (!complexesWithSubcomplex.isEmpty()) {
                 complexesWithAllMatchingOrthologs.addAll(findAllComplexesWithAllOrthologsMatching(
+                        config,
                         taxId,
                         orthologIds,
+                        cellularComponents,
                         complexesWithSubcomplex));
             }
         }
@@ -151,5 +177,37 @@ public class ComplexOrthologFinder {
                 "where interactor.ac in (:subcomplexesAcs)");
         query.setParameter("subcomplexesAcs", subcomplexesAcs);
         return query.getResultList();
+    }
+
+    private boolean doComplexMatchCellularComponent(
+            Collection<String> cellularComponents,
+            IntactComplex complexToCompare) {
+
+        if (cellularComponents.isEmpty()) {
+            return false;
+        }
+
+        Collection<String> cellularComponentsToCompare = XrefUtils
+                .collectAllXrefsHavingDatabaseAndQualifier(
+                        complexToCompare.getXrefs(), GO_MI_REF, null, CELLULAR_COMPONENT_MI_REF, null)
+                .stream()
+                .map(Xref::getId)
+                .collect(Collectors.toList());
+
+        if (cellularComponentsToCompare.isEmpty()) {
+            return false;
+        }
+
+        return cellularComponents.stream()
+                .anyMatch(cellularComponentsToCompare::contains);
+    }
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Config {
+        boolean checkCellularComponentsForCurated;
+        boolean checkCellularComponentsForPredicted;
     }
 }

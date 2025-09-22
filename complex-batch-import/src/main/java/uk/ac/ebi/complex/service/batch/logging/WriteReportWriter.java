@@ -9,7 +9,7 @@ public class WriteReportWriter extends ReportWriter {
     public static final String[] NEW_COMPLEXES_LINE = new String[]{
             "ids", "proteins", "xref_qualifier" };
     public static final String[] UPDATE_COMPLEXES_LINE = new String[]{
-            "ids", "proteins", "complex_acs", "xref_qualifier" };
+            "ids", "proteins", "complex_acs", "xref_qualifier", "eco_code" };
 
     public WriteReportWriter(File outputFile, String separator, boolean header, String[] headerline) throws IOException {
         super(outputFile, separator, header, headerline);
@@ -17,14 +17,28 @@ public class WriteReportWriter extends ReportWriter {
 
     public void write(Collection<String> ids,
                       Collection<String> uniprotAcs,
-                      Collection<String> complexAcs,
                       String xrefQualifier) throws IOException {
 
         writeLine(new String[]{
                 String.join(" ", ids),
                 String.join(" ", uniprotAcs),
-                String.join(" ", complexAcs),
                 xrefQualifier
+        });
+        flush();
+    }
+
+    public void write(Collection<String> ids,
+                      Collection<String> uniprotAcs,
+                      Collection<String> complexAcs,
+                      String xrefQualifier,
+                      String ecoCode) throws IOException {
+
+        writeLine(new String[]{
+                String.join(" ", ids),
+                String.join(" ", uniprotAcs),
+                String.join(" ", complexAcs),
+                xrefQualifier,
+                ecoCode
         });
         flush();
     }

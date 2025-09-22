@@ -18,7 +18,6 @@ import java.util.Collection;
 @SuperBuilder
 public class UniplexComplexManager extends ComplexManager<Integer, UniplexCluster> {
 
-    private static final String ML_ECO_CODE = "ECO:0008004";
     public static final String HUMAP_DATABASE_ID = "MI:2424";
     private static final String HUMAP_INSTITUION_ID = "MI:2424";
 
@@ -36,7 +35,11 @@ public class UniplexComplexManager extends ComplexManager<Integer, UniplexCluste
 
         // If the confidence does not match, then the complex needs updating
         Collection<Annotation> existingConfidenceAnnotations = getAuthorConfidenceAnnotations(existingComplex);
-        return existingConfidenceAnnotations.stream().noneMatch(ann -> ann.getValue().equals(newComplex.getConfidence().toString()));
+        if (existingConfidenceAnnotations.stream().noneMatch(ann -> ann.getValue().equals(newComplex.getConfidence().toString()))) {
+            return true;
+        }
+
+        return doesComplexEcoCodeNeedUpdating(existingComplex);
     }
 
     @Override
@@ -47,14 +50,6 @@ public class UniplexComplexManager extends ComplexManager<Integer, UniplexCluste
     @Override
     public boolean doesComplexNeedComplexClusterXref(UniplexCluster newComplex, IntactComplex existingComplex) {
         return doesComplexNeedXref(newComplex, existingComplex, HUMAP_DATABASE_ID, COMPLEX_CLUSTER_QUALIFIER_MI);
-    }
-
-    @Override
-    protected void setComplexEvidenceType(IntactComplex complex) throws CvTermNotFoundException {
-        // At the moment we are using ECO code ECO:0008004.
-        // Later on we need to add support for ECO:0007653, when we import data also from ProteomeHD
-        IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ML_ECO_CODE);
-        complex.setEvidenceType(evidenceType);
     }
 
     @Override

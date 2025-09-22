@@ -68,7 +68,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(complex).when(complexDao).getLatestComplexVersionByComplexAc(Mockito.anyString());
         Mockito.doReturn(List.of(complex, orthologComplex), List.of()).when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complexId, null);
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertEquals(1, orthologs.size());
         Assert.assertEquals(orthologComplex, orthologs.iterator().next());
@@ -99,7 +102,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(complex).when(complexDao).getByAc(Mockito.anyString());
         Mockito.doReturn(List.of(complex, orthologComplex), List.of()).when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complex.getAc(), null);
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complex.getAc(),
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertEquals(1, orthologs.size());
         Assert.assertEquals(orthologComplex, orthologs.iterator().next());
@@ -131,7 +137,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(complex).when(complexDao).getLatestComplexVersionByComplexAc(Mockito.anyString());
         Mockito.doReturn(List.of(complex, orthologComplex), List.of()).when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complexId, null);
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertTrue(orthologs.isEmpty());
 
@@ -182,7 +191,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(List.of(complex, orthologComplex1, orthologComplex2, noOrthologComplex), List.of())
                 .when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complexId, null);
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertEquals(2, orthologs.size());
         Assert.assertEquals(
@@ -232,7 +244,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(List.of(complex, subComplex), List.of(orthologComplex, noOrthologComplex), List.of())
                 .when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complexId, null);
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertEquals(1, orthologs.size());
         Assert.assertEquals(orthologComplex, orthologs.iterator().next());
@@ -268,7 +283,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(List.of(complex, orthologComplex), List.of())
                 .when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complexId, null);
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertEquals(1, orthologs.size());
         Assert.assertEquals(orthologComplex, orthologs.iterator().next());
@@ -316,7 +334,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(List.of(complex, orthologComplex1, orthologComplex2), List.of())
                 .when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complexId, organism.getTaxId());
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                organism.getTaxId(),
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertEquals(1, orthologs.size());
         Assert.assertEquals(orthologComplex1, orthologs.iterator().next());
@@ -337,7 +358,10 @@ public class ComplexOrthologFinderTest {
         Mockito.doReturn(complex).when(complexDao).getLatestComplexVersionByComplexAc(Mockito.anyString());
         Mockito.doReturn(List.of(complex), List.of()).when(query).getResultList();
 
-        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(complexId, null);
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(false).checkCellularComponentsForPredicted(false).build());
 
         Assert.assertTrue(orthologs.isEmpty());
 
@@ -345,6 +369,145 @@ public class ComplexOrthologFinderTest {
         Mockito.verify(intactDao).getEntityManager();
         Mockito.verify(entityManager).createQuery(Mockito.anyString());
         Mockito.verify(query).getResultList();
+        Mockito.verify(complexDao).getLatestComplexVersionByComplexAc(complexId);
+    }
+
+    @Test
+    public void findComplexOrthologCheckCellularComponent() {
+        String ortholog1 = "ortholog-1";
+        String ortholog2 = "ortholog-2";
+        String complexId = "CPX-1";
+        String cellularComponentXref = "GO:0001";
+        IntactComplex complex = new IntactComplex("test");
+        complex.assignComplexAc(complexId);
+        complex.addParticipant(
+                buildComplexParticipant("EBI-1", List.of(buildOrthologXref(ortholog1))));
+        complex.addParticipant(
+                buildComplexParticipant("EBI-2", List.of(buildOrthologXref(ortholog2))));
+        complex.getXrefs().add(buildCellularComponentXref(cellularComponentXref));
+
+        String orthologComplexId1 = "CPX-2";
+        IntactComplex orthologComplex1 = new IntactComplex("test");
+        orthologComplex1.assignComplexAc(orthologComplexId1);
+        orthologComplex1.addParticipant(
+                buildComplexParticipant("EBI-3", List.of(buildOrthologXref(ortholog1))));
+        orthologComplex1.addParticipant(
+                buildComplexParticipant("EBI-4", List.of(buildOrthologXref(ortholog2))));
+        orthologComplex1.getXrefs().add(buildCellularComponentXref(cellularComponentXref));
+
+        String orthologComplexId2 = "CPX-3";
+        IntactComplex orthologComplex2 = new IntactComplex("test");
+        orthologComplex2.assignComplexAc(orthologComplexId2);
+        orthologComplex2.addParticipant(
+                buildComplexParticipant("EBI-5", List.of(buildOrthologXref(ortholog1))));
+        orthologComplex2.addParticipant(
+                buildComplexParticipant("EBI-6", List.of(buildOrthologXref(ortholog2))));
+        orthologComplex2.getXrefs().add(buildCellularComponentXref("GO:0002"));
+
+        String orthologComplexId3 = "CPX-4";
+        IntactComplex orthologComplex3 = new IntactComplex("test");
+        orthologComplex3.assignComplexAc(orthologComplexId3);
+        orthologComplex3.addParticipant(
+                buildComplexParticipant("EBI-7", List.of(buildOrthologXref(ortholog1))));
+        orthologComplex3.addParticipant(
+                buildComplexParticipant("EBI-8", List.of(buildOrthologXref(ortholog2))));
+
+        String noOrthologComplexId = "CPX-5";
+        IntactComplex noOrthologComplex = new IntactComplex("test");
+        noOrthologComplex.assignComplexAc(noOrthologComplexId);
+        noOrthologComplex.addParticipant(
+                buildComplexParticipant("EBI-9", List.of(buildOrthologXref(ortholog1))));
+        noOrthologComplex.addParticipant(
+                buildComplexParticipant("EBI-10", List.of(buildOrthologXref("other-ortholog"))));
+
+        Mockito.doReturn(complex).when(complexDao).getLatestComplexVersionByComplexAc(Mockito.anyString());
+        Mockito.doReturn(List.of(complex, orthologComplex1, orthologComplex2, orthologComplex3, noOrthologComplex), List.of())
+                .when(query).getResultList();
+
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(true).checkCellularComponentsForPredicted(true).build());
+
+        Assert.assertEquals(1, orthologs.size());
+        Assert.assertEquals(
+                Set.of(orthologComplexId1),
+                orthologs.stream().map(IntactComplex::getComplexAc).collect(Collectors.toSet()));
+
+        Mockito.verify(intactDao).getComplexDao();
+        Mockito.verify(intactDao, Mockito.times(2)).getEntityManager();
+        Mockito.verify(entityManager, Mockito.times(2)).createQuery(Mockito.anyString());
+        Mockito.verify(query, Mockito.times(2)).getResultList();
+        Mockito.verify(complexDao).getLatestComplexVersionByComplexAc(complexId);
+    }
+
+    @Test
+    public void findComplexOrthologCheckCellularComponentOnlyForCurated() {
+        String ortholog1 = "ortholog-1";
+        String ortholog2 = "ortholog-2";
+        String complexId = "CPX-1";
+        String cellularComponentXref = "GO:0001";
+        IntactComplex complex = new IntactComplex("test");
+        complex.assignComplexAc(complexId);
+        complex.addParticipant(
+                buildComplexParticipant("EBI-1", List.of(buildOrthologXref(ortholog1))));
+        complex.addParticipant(
+                buildComplexParticipant("EBI-2", List.of(buildOrthologXref(ortholog2))));
+        complex.getXrefs().add(buildCellularComponentXref(cellularComponentXref));
+
+        String orthologComplexId1 = "CPX-2";
+        IntactComplex orthologComplex1 = new IntactComplex("test");
+        orthologComplex1.assignComplexAc(orthologComplexId1);
+        orthologComplex1.addParticipant(
+                buildComplexParticipant("EBI-3", List.of(buildOrthologXref(ortholog1))));
+        orthologComplex1.addParticipant(
+                buildComplexParticipant("EBI-4", List.of(buildOrthologXref(ortholog2))));
+        orthologComplex1.getXrefs().add(buildCellularComponentXref(cellularComponentXref));
+
+        String orthologComplexId2 = "CPX-3";
+        IntactComplex orthologComplex2 = new IntactComplex("test");
+        orthologComplex2.assignComplexAc(orthologComplexId2);
+        orthologComplex2.addParticipant(
+                buildComplexParticipant("EBI-5", List.of(buildOrthologXref(ortholog1))));
+        orthologComplex2.addParticipant(
+                buildComplexParticipant("EBI-6", List.of(buildOrthologXref(ortholog2))));
+        orthologComplex2.setPredictedComplex(true);
+        orthologComplex2.getXrefs().add(buildCellularComponentXref("GO:0002"));
+
+        String orthologComplexId3 = "CPX-4";
+        IntactComplex orthologComplex3 = new IntactComplex("test");
+        orthologComplex3.assignComplexAc(orthologComplexId3);
+        orthologComplex3.addParticipant(
+                buildComplexParticipant("EBI-7", List.of(buildOrthologXref(ortholog1))));
+        orthologComplex3.addParticipant(
+                buildComplexParticipant("EBI-8", List.of(buildOrthologXref(ortholog2))));
+
+        String noOrthologComplexId = "CPX-5";
+        IntactComplex noOrthologComplex = new IntactComplex("test");
+        noOrthologComplex.assignComplexAc(noOrthologComplexId);
+        noOrthologComplex.addParticipant(
+                buildComplexParticipant("EBI-9", List.of(buildOrthologXref(ortholog1))));
+        noOrthologComplex.addParticipant(
+                buildComplexParticipant("EBI-10", List.of(buildOrthologXref("other-ortholog"))));
+
+        Mockito.doReturn(complex).when(complexDao).getLatestComplexVersionByComplexAc(Mockito.anyString());
+        Mockito.doReturn(List.of(complex, orthologComplex1, orthologComplex2, orthologComplex3, noOrthologComplex), List.of())
+                .when(query).getResultList();
+
+        Collection<IntactComplex> orthologs = complexOrthologFinder.findComplexOrthologs(
+                complexId,
+                null,
+                ComplexOrthologFinder.Config.builder().checkCellularComponentsForCurated(true).checkCellularComponentsForPredicted(false).build());
+
+        Assert.assertEquals(2, orthologs.size());
+        Assert.assertEquals(
+                Set.of(orthologComplexId1, orthologComplexId2),
+                orthologs.stream().map(IntactComplex::getComplexAc).collect(Collectors.toSet()));
+
+        Mockito.verify(intactDao).getComplexDao();
+        Mockito.verify(intactDao, Mockito.times(2)).getEntityManager();
+        Mockito.verify(entityManager, Mockito.times(2)).createQuery(Mockito.anyString());
+        Mockito.verify(query, Mockito.times(2)).getResultList();
         Mockito.verify(complexDao).getLatestComplexVersionByComplexAc(complexId);
     }
 
@@ -384,6 +547,14 @@ public class ComplexOrthologFinderTest {
         CvTerm database = new DefaultCvTerm("test db");
         CvTerm qualifier = new DefaultCvTerm("orthology group");
         qualifier.setMIIdentifier(ComplexOrthologFinder.ORTHOLOGY_MI);
+        return new DefaultXref(database, xrefId, qualifier);
+    }
+
+    private Xref buildCellularComponentXref(String xrefId) {
+        CvTerm database = new DefaultCvTerm("go");
+        database.setMIIdentifier(ComplexOrthologFinder.GO_MI_REF);
+        CvTerm qualifier = new DefaultCvTerm("cellular component");
+        qualifier.setMIIdentifier(ComplexOrthologFinder.CELLULAR_COMPONENT_MI_REF);
         return new DefaultXref(database, xrefId, qualifier);
     }
 }

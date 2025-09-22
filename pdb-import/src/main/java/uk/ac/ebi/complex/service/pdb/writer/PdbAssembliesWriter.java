@@ -7,6 +7,7 @@ import org.springframework.batch.item.ItemStreamException;
 import psidev.psi.mi.jami.model.Complex;
 import psidev.psi.mi.jami.model.Xref;
 import uk.ac.ebi.complex.service.batch.exception.CvTermNotFoundException;
+import uk.ac.ebi.complex.service.batch.manager.ComplexManager;
 import uk.ac.ebi.complex.service.batch.writer.AbstractBatchWriter;
 import uk.ac.ebi.complex.service.pdb.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.pdb.model.ComplexWithAssemblyXrefs;
@@ -26,8 +27,6 @@ import java.util.Map;
 @Log4j
 @SuperBuilder
 public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssemblyXrefs, Complex> {
-
-    private static final String WWPDB_DB_MI = "MI:0805";
 
     private final IntactDao intactDao;
 
@@ -62,28 +61,36 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
 
     @Override
     public void write(List<? extends ComplexWithAssemblyXrefs> items) throws Exception {
-        Map<String, IntactComplex> complexesToSave = new HashMap<>();
-        for (ComplexWithAssemblyXrefs item: items) {
-            IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
-            try {
-                for (InteractorXref xrefToRemove: item.getXrefsToRemove()) {
-                    removeXref(complex.getIdentifiers(), xrefToRemove);
-                    removeXref(complex.getXrefs(), xrefToRemove);
-                }
-                for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
-                    updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
-                    updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
-                }
-                for (String xrefToAdd: item.getXrefsToAdd()) {
-                    addNewXref(complex, xrefToAdd);
-                }
-            } catch (Exception e) {
-                log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
-                errorReportWriter.write(item.getComplexId(), e.getMessage());
-            }
-        }
-
         if (!appProperties.isDryRunMode()) {
+            Map<String, IntactComplex> complexesToSave = new HashMap<>();
+            for (ComplexWithAssemblyXrefs item: items) {
+                IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
+                try {
+                    for (InteractorXref xrefToRemove: item.getXrefsToRemove()) {
+                        removeXref(complex.getIdentifiers(), xrefToRemove);
+                        removeXref(complex.getXrefs(), xrefToRemove);
+                    }
+                    for (InteractorXref xrefToUpdate: item.getXrefsToUpdate()) {
+                        updateXrefQualifier(complex.getIdentifiers(), xrefToUpdate);
+                        updateXrefQualifier(complex.getXrefs(), xrefToUpdate);
+                    }
+                    for (String xrefToAdd: item.getXrefsToAdd()) {
+                        addNewXref(complex, xrefToAdd);
+                    }
+
+                    String expectedEcoCode = ComplexManager.getEcoCodeExpectedForComplex(complex);
+                    if (expectedEcoCode != null) {
+                        if (!complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode)) {
+                            IntactCvTerm newEvidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, expectedEcoCode);
+                            complex.setEvidenceType(newEvidenceType);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
+                    errorReportWriter.write(item.getComplexId(), e.getMessage());
+                }
+            }
+
             this.intactService.saveOrUpdate(complexesToSave.values());
         }
     }
@@ -105,7 +112,7 @@ public class PdbAssembliesWriter extends AbstractBatchWriter<ComplexWithAssembly
     }
 
     private void addNewXref(IntactComplex complex, String xrefToAdd) throws CvTermNotFoundException {
-        IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, WWPDB_DB_MI);
+        IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, ComplexManager.WWPDB_DB_MI);
         IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
         InteractorXref newXref = new InteractorXref(database, xrefToAdd, qualifier);
         complex.getIdentifiers().add(newXref);

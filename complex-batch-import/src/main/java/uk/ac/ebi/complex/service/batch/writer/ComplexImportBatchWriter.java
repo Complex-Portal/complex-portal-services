@@ -89,7 +89,8 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
 
                         if (isComplexNotOnHold && complexManager.doesComplexNeedUpdating(complexToImport, existingComplex)) {
                             if (appProperties.isDryRunMode()) {
-                                logComplexesToUpdate(complexToImport, List.of(existingComplex), Xref.IDENTITY);
+                                String expectedEcoCode = ComplexManager.getEcoCodeExpectedForComplex(existingComplex);
+                                logComplexesToUpdate(complexToImport, List.of(existingComplex), Xref.IDENTITY, expectedEcoCode);
                             } else {
                                 updatedIdentityComplexes.put(
                                         complexToImport.getComplexIds().iterator().next(),
@@ -113,7 +114,7 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                 for (IntactComplex existingComplex : complexWithMatches.getComplexesToAddSubsetXref()) {
                     if (complexManager.doesComplexNeedSubsetXref(complexToImport, existingComplex)) {
                         if (appProperties.isDryRunMode()) {
-                            logComplexesToUpdate(complexToImport, List.of(existingComplex), ComplexManager.SUBSET_QUALIFIER);
+                            logComplexesToUpdate(complexToImport, List.of(existingComplex), ComplexManager.SUBSET_QUALIFIER, null);
                         } else {
                             updatedSubsetComplexes.put(
                                     complexToImport.getComplexIds().iterator().next(),
@@ -140,7 +141,7 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                     }
                     if (complexToUpdateFound) {
                         if (appProperties.isDryRunMode()) {
-                            logComplexesToUpdate(complexToImport, complexCluster, ComplexManager.COMPLEX_CLUSTER_QUALIFIER);
+                            logComplexesToUpdate(complexToImport, complexCluster, ComplexManager.COMPLEX_CLUSTER_QUALIFIER, null);
                         }
                     } else {
                         logUnchangedComplexes(complexToImport, complexCluster, ComplexManager.COMPLEX_CLUSTER_QUALIFIER);
@@ -162,7 +163,7 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
             for (ComplexWithMatches<T, R> complexWithMatches : items) {
                 R complexToImport = complexWithMatches.getComplexToImport();
                 logNewComplexes(complexToImport, newComplexes);
-                logUpdatedComplexes(complexToImport, updatedIdentityComplexes, Xref.IDENTITY);
+                logUpdatedComplexesWithIdentity(complexToImport, updatedIdentityComplexes);
                 logUpdatedComplexes(complexToImport, updatedSubsetComplexes, ComplexManager.SUBSET_QUALIFIER);
                 logUpdatedComplexes(complexToImport, updatedComplexClusterComplexes, ComplexManager.COMPLEX_CLUSTER_QUALIFIER);
             }
@@ -197,16 +198,16 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
         complexesToCreateReportWriter.write(
                 complex.getComplexIds(),
                 complex.getProteinIds(),
-                List.of(),
                 Xref.IDENTITY);
     }
 
-    private void logComplexesToUpdate(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
+    private void logComplexesToUpdate(R complex, Collection<IntactComplex> existingComplexes, String qualifier, String ecoCode) throws IOException {
         complexesToUpdateReportWriter.write(
                 complex.getComplexIds(),
                 complex.getProteinIds(),
                 existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
-                qualifier);
+                qualifier,
+                ecoCode != null ? ecoCode : "");
     }
 
     private void logUnchangedComplexes(R complex, Collection<IntactComplex> existingComplexes, String qualifier) throws IOException {
@@ -214,7 +215,8 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                 complex.getComplexIds(),
                 complex.getProteinIds(),
                 existingComplexes.stream().map(IntactComplex::getComplexAc).collect(Collectors.toList()),
-                qualifier);
+                qualifier,
+                "");
     }
 
     private void logNewComplexes(R complex, Map<String, IntactComplex> newComplexes) throws IOException {
@@ -228,7 +230,8 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                             .filter(e -> complexId.equals(e.getKey()))
                             .map(e -> e.getValue().getComplexAc())
                             .collect(Collectors.toList()),
-                    Xref.IDENTITY);
+                    Xref.IDENTITY,
+                    ComplexManager.ML_ECO_CODE);
         }
     }
 
@@ -243,7 +246,32 @@ public class ComplexImportBatchWriter<T, R extends ComplexToImport<T>> extends A
                             .filter(e -> complexId.equals(e.getKey()))
                             .map(e -> e.getValue().getComplexAc())
                             .collect(Collectors.toList()),
-                    qualifier);
+                    qualifier,
+                    "");
+        }
+    }
+
+    private void logUpdatedComplexesWithIdentity(R complex, Map<String, IntactComplex> existingComplexes) throws IOException {
+        if (!existingComplexes.isEmpty()) {
+            String complexId = complex.getComplexIds().iterator().next();
+            if (existingComplexes.containsKey(complexId)) {
+                IntactComplex existingComplex = existingComplexes.get(complexId);
+                if (existingComplex.isPredictedComplex()) {
+                    updatedComplexesReportWriter.write(
+                            complex.getComplexIds(),
+                            complex.getProteinIds(),
+                            List.of(existingComplex.getComplexAc()),
+                            Xref.IDENTITY,
+                            "");
+                } else {
+                    updatedComplexesReportWriter.write(
+                            complex.getComplexIds(),
+                            complex.getProteinIds(),
+                            List.of(existingComplex.getComplexAc()),
+                            Xref.IDENTITY,
+                            existingComplex.getEvidenceType().getMIIdentifier());
+                }
+            }
         }
     }
 }

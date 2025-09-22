@@ -82,12 +82,14 @@ public class PdbAssembliesFileReader {
             List<String> complexIds = StringUtils.isEmpty(csvLine[1])
                     ? List.of()
                     : Stream.of(csvLine[1].split(" ")).collect(Collectors.toList());
-            Set<UniprotProtein> proteins = Stream.of(csvLine[2].split(" ")).map(this::proteinFromString).collect(Collectors.toSet());
-            assemblyEntries.add(AssemblyEntry.builder()
-                    .assemblies(assemblies)
-                    .complexIds(complexIds)
-                    .proteins(proteins)
-                    .build());
+            if (!StringUtils.isEmpty(csvLine[2])) {
+                Set<UniprotProtein> proteins = Stream.of(csvLine[2].split(" ")).map(this::proteinFromString).collect(Collectors.toSet());
+                assemblyEntries.add(AssemblyEntry.builder()
+                        .assemblies(assemblies)
+                        .complexIds(complexIds)
+                        .proteins(proteins)
+                        .build());
+            }
         });
         csvReader.close();
 
@@ -135,7 +137,15 @@ public class PdbAssembliesFileReader {
         String[] proteinFields = proteinString.split("\\|");
         return UniprotProtein.builder()
                 .proteinAc(proteinFields[0])
-                .organism(Integer.valueOf(proteinFields[1]))
+                .organism(proteinFields.length > 1 ? parseOrganism(proteinFields[1]) : null)
                 .build();
+    }
+
+    private Integer parseOrganism(String organism) {
+        try {
+            return Integer.valueOf(organism);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

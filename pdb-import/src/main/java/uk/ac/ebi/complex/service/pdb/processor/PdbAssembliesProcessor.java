@@ -13,6 +13,7 @@ import psidev.psi.mi.jami.utils.CvTermUtils;
 import psidev.psi.mi.jami.utils.XrefUtils;
 import psidev.psi.mi.jami.utils.comparator.CollectionComparator;
 import psidev.psi.mi.jami.utils.comparator.participant.ModelledComparableParticipantComparator;
+import uk.ac.ebi.complex.service.batch.manager.ComplexManager;
 import uk.ac.ebi.complex.service.batch.processor.AbstractBatchProcessor;
 import uk.ac.ebi.complex.service.pdb.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.pdb.logging.ProcessReportWriter;
@@ -40,9 +41,10 @@ import java.util.stream.Collectors;
 @SuperBuilder
 public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAssemblies, ComplexWithAssemblyXrefs> {
 
-    private static final String WWPDB_DB_MI = "MI:0805";
-    private static final String WWPDB_DB_NAME = "wwpdb";
     private static final String EXP_EVIDENCE = "exp-evidence";
+
+    private static final String ML_ECO_CODE = "ECO:0008004";
+    private static final String COMP_EVIDENCE_ECO_CODE = "ECO:0007653";
 
     private final IntactDao intactDao;
     private final PdbAssembliesFileReader pdbAssembliesFileReader;
@@ -52,6 +54,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
     private ProcessReportWriter complexesWithExtraAssembliesReportWriter;
     private ProcessReportWriter complexesWithXrefsToUpdateReportWriter;
     private ProcessReportWriter complexesWithXrefsToReviewReportWriter;
+    private ProcessReportWriter ecoCodeChangesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
     private CollectionComparator<ModelledComparableParticipant> comparableParticipantsComparator;
@@ -63,8 +66,10 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
         try {
             IntactComplex complex = intactDao.getComplexDao().getLatestComplexVersionByComplexAc(item.getComplexId());
             List<Xref> pdbXrefs = new ArrayList<>();
-            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(complex.getIdentifiers(), WWPDB_DB_MI, WWPDB_DB_NAME));
-            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(complex.getXrefs(), WWPDB_DB_MI, WWPDB_DB_NAME));
+            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(
+                    complex.getIdentifiers(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME));
+            pdbXrefs.addAll(XrefUtils.collectAllXrefsHavingDatabase(
+                    complex.getXrefs(), ComplexManager.WWPDB_DB_MI, ComplexManager.WWPDB_DB_NAME));
 
             List<String> xrefsToAdd = new ArrayList<>();
             List<InteractorXref> xrefsToRemove = new ArrayList<>();
@@ -81,7 +86,8 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             Set<String> assembliesToCheck = new HashSet<>();
             for (AssemblyEntry assemblyEntry : assemblies) {
                 Collection<ModelledComparableParticipant> assemblyProteins = assemblyEntry.getProteins().stream()
-                        .filter(protein -> protein.getOrganism() == complex.getOrganism().getTaxId())
+                        .filter(protein ->
+                                protein.getOrganism() == null || protein.getOrganism() == complex.getOrganism().getTaxId())
                         .map(protein -> new ModelledComparableParticipant(
                                 protein.getProteinAc(),
                                 List.of(new DefaultXref(
@@ -93,14 +99,16 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                         .collect(Collectors.toList());
 
                 if (this.comparableParticipantsComparator.compare(complexProteins, assemblyProteins) == 0) {
-                    assembliesToCheck.addAll(assemblyEntry.getAssemblies());
+                    assemblyEntry.getAssemblies().forEach(assembly -> assembliesToCheck.add(assembly.toLowerCase()));
                 }
             }
 
             for (Xref xref: pdbXrefs) {
                 if (xref.getQualifier() != null) {
                     if (!matchesFound.contains(((InteractorXref) xref).getAc())) {
-                        if (!assembliesToCheck.contains(xref.getId().toLowerCase())) {
+                        if (assembliesToCheck.contains(xref.getId().toLowerCase())) {
+                            matchesFound.add(((InteractorXref) xref).getAc());
+                        } else {
                             if (Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
                                 // Xref does not match any PDB assembly, we delete it as it has identity qualifier
                                 xrefsToRemove.add((InteractorXref) xref);
@@ -115,15 +123,18 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             if (xrefsToAdd.isEmpty() && xrefsToRemove.isEmpty() && xrefsToUpdate.isEmpty() && xrefsToReview.isEmpty()) {
                 noChangesReportWriter.write(
                         item.getComplexId(),
+                        item.isPredicted(),
                         pdbXrefs.stream().map(Xref::getId).collect(Collectors.toSet()));
             } else if (!xrefsToAdd.isEmpty() && xrefsToRemove.isEmpty() && xrefsToUpdate.isEmpty() && xrefsToReview.isEmpty()) {
                 complexesMissingAssembliesReportWriter.write(
                         item.getComplexId(),
+                        item.isPredicted(),
                         item.getAssembliesFromFile(),
                         xrefsToAdd);
             } else if (!xrefsToRemove.isEmpty() && xrefsToAdd.isEmpty() && xrefsToUpdate.isEmpty() && xrefsToReview.isEmpty()) {
                 complexesWithExtraAssembliesReportWriter.write(
                         item.getComplexId(),
+                        item.isPredicted(),
                         item.getAssembliesFromFile(),
                         xrefsToRemove.stream()
                                 .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
@@ -131,6 +142,7 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             } else if (!xrefsToUpdate.isEmpty() && xrefsToAdd.isEmpty() && xrefsToRemove.isEmpty() && xrefsToReview.isEmpty()) {
                 complexesWithXrefsToUpdateReportWriter.write(
                         item.getComplexId(),
+                        item.isPredicted(),
                         item.getAssembliesFromFile(),
                         xrefsToUpdate.stream()
                                 .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
@@ -138,10 +150,26 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             }  else {
                 complexesWithXrefsToReviewReportWriter.write(
                         item.getComplexId(),
+                        item.isPredicted(),
                         item.getAssembliesFromFile(),
                         pdbXrefs.stream()
                                 .map(xref -> xref.getId() + "(" + (xref.getQualifier() != null ? xref.getQualifier().getShortName() : "" ) + ")")
                                 .collect(Collectors.toList()));
+            }
+
+            if (complex.isPredictedComplex()) {
+                String expectedEcoCode = matchesFound.isEmpty() ? ComplexManager.ML_ECO_CODE : ComplexManager.COMP_EVIDENCE_ECO_CODE;
+                Set<String> complexEcoCodes = XrefUtils.collectAllXrefsHavingDatabase(complex.getEvidenceType().getIdentifiers(), "MI:1331", "evidence ontology")
+                        .stream()
+                        .map(Xref::getId)
+                        .collect(Collectors.toSet());
+                if (!complexEcoCodes.contains(expectedEcoCode)) {
+                    ecoCodeChangesReportWriter.write(
+                            item.getComplexId(),
+                            item.isPredicted(),
+                            String.join("|", complexEcoCodes),
+                            expectedEcoCode);
+                }
             }
 
             return new ComplexWithAssemblyXrefs(
@@ -289,6 +317,8 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
                 new File(reportDirectory, "complexes_with_xrefs_to_update" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_ASSEMBLIES_TO_UPDATE);
         this.complexesWithXrefsToReviewReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "complexes_with_xrefs_to_review" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_XREFS_TO_REVIEW);
+        this.ecoCodeChangesReportWriter = new ProcessReportWriter(
+                new File(reportDirectory, "complexes_with_eco_codes_to_update" + extension), sep, header, ProcessReportWriter.ECO_CODE_CHANGE_HEADER_LINE);
         this.errorReportWriter = new ErrorsReportWriter(
                 new File(reportDirectory, "process_errors" + extension), sep, header);
     }

@@ -22,8 +22,7 @@ public class ComplexOrthologs {
     public static class ComplexWithXrefs {
         private String complexId;
         private String complexName;
-//        private Collection<String> molecularFunctions;
-//        private Collection<String> biologicalProcesses;
+        private boolean predicted;
         private Collection<String> cellularComponents;
     }
 }
