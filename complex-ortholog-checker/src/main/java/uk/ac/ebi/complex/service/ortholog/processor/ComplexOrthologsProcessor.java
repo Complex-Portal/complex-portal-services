@@ -33,9 +33,6 @@ public class ComplexOrthologsProcessor implements ItemProcessor<IntactComplex, C
             LifeCycleStatus.READY_FOR_RELEASE,
             LifeCycleStatus.RELEASED);
 
-    private static final String GO_MI_REF = "MI:0448";
-    private static final String CELLULAR_COMPONENT_QUALIFIER_NAME = "cellular component";
-
     private final ComplexOrthologFinder complexOrthologFinder;
     private final String taxId;
 
@@ -43,7 +40,12 @@ public class ComplexOrthologsProcessor implements ItemProcessor<IntactComplex, C
     public ComplexOrthologs process(IntactComplex item) {
         if (!item.isPredictedComplex() && STATUSES_TO_CONSIDER.contains(item.getStatus())) {
             Collection<IntactComplex> complexes = this.complexOrthologFinder.findComplexOrthologs(
-                    item.getComplexAc(), Integer.valueOf(taxId));
+                    item.getComplexAc(),
+                    Integer.valueOf(taxId),
+                    ComplexOrthologFinder.Config.builder()
+                            .checkCellularComponentsForCurated(false)
+                            .checkCellularComponentsForPredicted(false)
+                            .build());
 
             return ComplexOrthologs.builder()
                     .inputComplex(mapComplex(item))
@@ -67,25 +69,23 @@ public class ComplexOrthologsProcessor implements ItemProcessor<IntactComplex, C
     public void close() throws ItemStreamException {
     }
 
-    private Collection<Xref> getGoXrefs(IntactComplex complex) {
-        return XrefUtils.collectAllXrefsHavingDatabase(complex.getXrefs(), GO_MI_REF, null);
-    }
-
-    private Collection<String> filterXrefsWithQualifierFullName(Collection<Xref> xrefs, String qualifierFullName) {
-        return xrefs.stream()
-                .filter(xref -> xref.getQualifier() != null)
-                .filter(xref -> qualifierFullName.equals(xref.getQualifier().getFullName()))
+    private ComplexOrthologs.ComplexWithXrefs mapComplex(IntactComplex complex) {
+        Collection<String> cellularComponents = XrefUtils
+                .collectAllXrefsHavingDatabaseAndQualifier(
+                        complex.getXrefs(),
+                        ComplexOrthologFinder.GO_MI_REF,
+                        null,
+                        ComplexOrthologFinder.CELLULAR_COMPONENT_MI_REF,
+                        null)
+                .stream()
                 .map(Xref::getId)
                 .collect(Collectors.toList());
-    }
 
-    private ComplexOrthologs.ComplexWithXrefs mapComplex(IntactComplex complex) {
-        Collection<Xref> goXrefs = getGoXrefs(complex);
         return ComplexOrthologs.ComplexWithXrefs.builder()
                 .complexId(complex.getComplexAc())
                 .complexName(getComplexName(complex))
                 .predicted(complex.isPredictedComplex())
-                .cellularComponents(filterXrefsWithQualifierFullName(goXrefs, CELLULAR_COMPONENT_QUALIFIER_NAME))
+                .cellularComponents(cellularComponents)
                 .build();
     }
 
