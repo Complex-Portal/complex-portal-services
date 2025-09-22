@@ -98,7 +98,6 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                             .complexId(complexAc)
                             .predicted(intactComplex.isPredictedComplex())
                             .assembliesFromFile(assembliesFromFile)
-//                            .assembliesWithSameProteins(assembliesFromProteins)
                             .build();
                 }
 
@@ -111,7 +110,6 @@ public class PdbAssembliesReader implements ItemReader<ComplexWithAssemblies>, I
                             .complexId(complexAc)
                             .predicted(intactComplex.isPredictedComplex())
                             .assembliesFromFile(new HashSet<>())
-//                            .assembliesWithSameProteins(new HashSet<>())
                             .build();
                 }
             }
