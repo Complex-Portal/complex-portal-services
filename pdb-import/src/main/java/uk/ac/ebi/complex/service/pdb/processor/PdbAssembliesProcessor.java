@@ -106,14 +106,16 @@ public class PdbAssembliesProcessor extends AbstractBatchProcessor<ComplexWithAs
             for (Xref xref: pdbXrefs) {
                 if (xref.getQualifier() != null) {
                     if (!matchesFound.contains(((InteractorXref) xref).getAc())) {
-                        if (!assembliesToCheck.contains(xref.getId().toLowerCase())) {
+                        if (assembliesToCheck.contains(xref.getId().toLowerCase())) {
+                            matchesFound.add(((InteractorXref) xref).getAc());
+                        } else {
                             if (Xref.IDENTITY_MI.equals(xref.getQualifier().getMIIdentifier())) {
-                                if (item.getAssembliesWithSameProteins().contains(xref.getId().toLowerCase())) {
-                                    matchesFound.add(((InteractorXref) xref).getAc());
-                                } else {
+//                                if (item.getAssembliesWithSameProteins().contains(xref.getId().toLowerCase())) {
+//                                    matchesFound.add(((InteractorXref) xref).getAc());
+//                                } else {
                                     // Xref does not match any PDB assembly, we delete it as it has identity qualifier
                                     xrefsToRemove.add((InteractorXref) xref);
-                                }
+//                                }
                             } else if (EXP_EVIDENCE.equals(xref.getQualifier().getShortName())) {
                                 xrefsToReview.add((InteractorXref) xref);
                             }
