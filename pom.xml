@@ -35,6 +35,7 @@
         <module>protein-covariation-import</module>
         <module>complex-ortholog-checker</module>
         <module>complex-intact-coverage-checker</module>
+        <module>qsproteome-import</module>
     </modules>
 
     <scm>
