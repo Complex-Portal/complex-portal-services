@@ -5,8 +5,8 @@
 #SBATCH --cpus-per-task=5   # number of CPUs Per Task i.e if your code is multi-threaded
 #SBATCH -p production   # partition(s)
 #SBATCH --mem=4G   # memory per node
-#SBATCH -o "/homes/mi/test-complex-orthologs/check-complex-orthologs-%j.out"   # job output file
-#SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
+#SBATCH -o "/nfs/production/hhe/intact/data/complex-job-logs/check-complex-orthologs-%j.out"   # job output file
+#SBATCH --mail-user=intact-dev@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
 if [ $# -ne 7 ]; then

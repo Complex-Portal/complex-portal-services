@@ -8,7 +8,7 @@
 #SBATCH --mem=8G   # memory per node
 #SBATCH -J "COVARIATION_IMPORT"   # job name
 #SBATCH -o "/nfs/production/hhe/intact/data/protein-covariation-import-logs/import-protein-covariations-%j.out"   # job output file
-#SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
+#SBATCH --mail-user=intact-dev@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
 if [ $# -ne 8 ]; then

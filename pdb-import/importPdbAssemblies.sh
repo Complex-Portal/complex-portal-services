@@ -6,7 +6,7 @@
 #SBATCH -p production   # partition(s)
 #SBATCH --mem=16G   # memory per node
 #SBATCH -o "/nfs/production/hhe/intact/data/db-import-logs/import-pdb-assemblies-%j.out"   # job output file
-#SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
+#SBATCH --mail-user=intact-dev@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
 if [ $# -ne 6 ]; then
