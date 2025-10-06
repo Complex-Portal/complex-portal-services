@@ -1,7 +1,7 @@
 package uk.ac.ebi.complex.service.qsproteome.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.RateLimiter;
+//import com.google.common.util.concurrent.RateLimiter;
 import org.springframework.batch.core.ChunkListener;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -46,7 +46,7 @@ public class QsProteomeImportConfig {
                 .intactDao(intactDao)
                 .client(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build())
                 .mapper(new ObjectMapper())
-                .rateLimiter(RateLimiter.create(1.75))
+//                .rateLimiter(RateLimiter.create(1.75))
                 .fileConfiguration(fileConfiguration)
                 .build();
     }

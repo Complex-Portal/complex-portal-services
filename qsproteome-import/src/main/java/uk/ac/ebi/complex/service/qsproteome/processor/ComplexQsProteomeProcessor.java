@@ -3,7 +3,9 @@ package uk.ac.ebi.complex.service.qsproteome.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.google.common.util.concurrent.RateLimiter;
+//import com.google.common.util.concurrent.RateLimiter;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
@@ -22,6 +24,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -36,11 +39,13 @@ public class ComplexQsProteomeProcessor extends AbstractBatchProcessor<IntactCom
     private final IntactDao intactDao;
     private final HttpClient client;
     private final ObjectMapper mapper;
-    private final RateLimiter rateLimiter;
+//    private final RateLimiter rateLimiter;
 
     private ProcessReportWriter noMatchesReportWriter;
     private ProcessReportWriter complexesWithStructuresReportWriter;
     private ErrorsReportWriter errorReportWriter;
+
+    private static final Bucket RATE_LIMITER_BUCKET = Bucket.builder().addLimit(Bandwidth.simple(1, Duration.ofSeconds(1))).build();
 
     @Override
     public ComplexWithProteomeStructures process(IntactComplex item) throws Exception {
@@ -51,11 +56,11 @@ public class ComplexQsProteomeProcessor extends AbstractBatchProcessor<IntactCom
                 noMatchesReportWriter.write(complexId, item.isPredictedComplex(), List.of());
             } else {
                 complexesWithStructuresReportWriter.write(complexId, item.isPredictedComplex(), structures);
-                return ComplexWithProteomeStructures.builder()
-                        .complexId(complexId)
-                        .qsProteomeIds(structures)
-                        .build();
             }
+            return ComplexWithProteomeStructures.builder()
+                    .complexId(complexId)
+                    .qsProteomeIds(structures)
+                    .build();
         } catch (Exception e) {
             log.error("Error processing QSProteome structures for complex: " + complexId, e);
             errorReportWriter.write(List.of(complexId), e.getMessage());
@@ -105,7 +110,8 @@ public class ComplexQsProteomeProcessor extends AbstractBatchProcessor<IntactCom
     }
 
     private Collection<String> getQsProteomeStructuresWithRateLimit(String complexId) throws IOException, InterruptedException {
-        rateLimiter.acquire();
+        RATE_LIMITER_BUCKET.asBlocking().consumeUninterruptibly(1);
+//        rateLimiter.acquire();
         return getQsProteomeStructures(complexId);
     }
 
