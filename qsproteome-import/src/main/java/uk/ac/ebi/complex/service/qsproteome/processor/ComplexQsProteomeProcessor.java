@@ -74,8 +74,6 @@ public class ComplexQsProteomeProcessor extends AbstractBatchProcessor<IntactCom
         } catch (IOException e) {
             throw new ItemStreamException("Report file writer could not be flushed", e);
         }
-
-        rateLimiter.setRate(2.0);
     }
 
     @Override

@@ -41,12 +41,13 @@ public class QsProteomeImportConfig {
     }
 
     @Bean
-    public ComplexQsProteomeProcessor complexQsProteomeProcessor(IntactDao intactDao) {
+    public ComplexQsProteomeProcessor complexQsProteomeProcessor(IntactDao intactDao, FileConfiguration fileConfiguration) {
         return ComplexQsProteomeProcessor.builder()
                 .intactDao(intactDao)
                 .client(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build())
                 .mapper(new ObjectMapper())
-                .rateLimiter(RateLimiter.create(2.0))
+                .rateLimiter(RateLimiter.create(1.75))
+                .fileConfiguration(fileConfiguration)
                 .build();
     }
 
