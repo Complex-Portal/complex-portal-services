@@ -96,7 +96,7 @@ public class QsProteomeImportConfig {
     }
 
     @Bean
-    public Job complexQsProteomeImportJob(
+    public Job complexQsProteomeImport(
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
             @Qualifier("complexQsProteomeImportStep") Step importStep) throws Exception {
