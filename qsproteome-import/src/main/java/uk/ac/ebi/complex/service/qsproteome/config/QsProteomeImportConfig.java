@@ -1,7 +1,6 @@
 package uk.ac.ebi.complex.service.qsproteome.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.google.common.util.concurrent.RateLimiter;
 import org.springframework.batch.core.ChunkListener;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -23,6 +22,7 @@ import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
 import uk.ac.ebi.complex.service.qsproteome.model.ComplexWithProteomeStructures;
 import uk.ac.ebi.complex.service.qsproteome.processor.ComplexQsProteomeProcessor;
 import uk.ac.ebi.complex.service.qsproteome.reader.ComplexReader;
+import uk.ac.ebi.complex.service.qsproteome.reader.QsProteomeStructuresFileReader;
 import uk.ac.ebi.complex.service.qsproteome.writer.ComplexQsProteomeWriter;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
@@ -41,13 +41,17 @@ public class QsProteomeImportConfig {
     }
 
     @Bean
-    public ComplexQsProteomeProcessor complexQsProteomeProcessor(IntactDao intactDao, FileConfiguration fileConfiguration) {
+    public ComplexQsProteomeProcessor complexQsProteomeProcessor(
+            IntactDao intactDao,
+            FileConfiguration fileConfiguration,
+            QsProteomeStructuresFileReader qsProteomeStructuresFileReader) {
+
         return ComplexQsProteomeProcessor.builder()
                 .intactDao(intactDao)
                 .client(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build())
                 .mapper(new ObjectMapper())
-//                .rateLimiter(RateLimiter.create(1.75))
                 .fileConfiguration(fileConfiguration)
+                .qsProteomeStructuresFileReader(qsProteomeStructuresFileReader)
                 .build();
     }
 

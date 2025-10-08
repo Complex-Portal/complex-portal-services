@@ -13,13 +13,17 @@ public abstract class ReportWriter {
     private final ICSVWriter csvWriter;
 
     public ReportWriter(File outputFile, String separator, boolean header, String[] headerLine) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+        this(outputFile, separator, header, headerLine, false);
+    }
+
+    public ReportWriter(File outputFile, String separator, boolean header, String[] headerLine, boolean append) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile, append));
         this.csvWriter = new CSVWriterBuilder(writer)
                 .withSeparator(separator.charAt(0))
                 .withQuoteChar(ICSVWriter.NO_QUOTE_CHARACTER)
                 .build();
 
-        if (header) {
+        if (header && !append) {
             writeLine(headerLine);
         }
     }

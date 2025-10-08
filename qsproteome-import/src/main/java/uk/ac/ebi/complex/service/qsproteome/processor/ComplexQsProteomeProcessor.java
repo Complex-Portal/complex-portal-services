@@ -3,7 +3,6 @@ package uk.ac.ebi.complex.service.qsproteome.processor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-//import com.google.common.util.concurrent.RateLimiter;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import lombok.experimental.SuperBuilder;
@@ -15,6 +14,7 @@ import uk.ac.ebi.complex.service.batch.logging.ErrorsReportWriter;
 import uk.ac.ebi.complex.service.batch.processor.AbstractBatchProcessor;
 import uk.ac.ebi.complex.service.qsproteome.logging.ProcessReportWriter;
 import uk.ac.ebi.complex.service.qsproteome.model.ComplexWithProteomeStructures;
+import uk.ac.ebi.complex.service.qsproteome.reader.QsProteomeStructuresFileReader;
 import uk.ac.ebi.intact.jami.dao.IntactDao;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 
@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Log4j
@@ -35,35 +36,50 @@ import java.util.Set;
 public class ComplexQsProteomeProcessor extends AbstractBatchProcessor<IntactComplex, ComplexWithProteomeStructures> {
 
     private static final String QS_PROTEOME_API = "https://qsproteome.org/api/lookup-entry-by-complexportal?id=";
+    private static final Bucket RATE_LIMITER_BUCKET = Bucket.builder().addLimit(Bandwidth.simple(1, Duration.ofSeconds(1))).build();
 
     private final IntactDao intactDao;
     private final HttpClient client;
     private final ObjectMapper mapper;
-//    private final RateLimiter rateLimiter;
+    private final QsProteomeStructuresFileReader qsProteomeStructuresFileReader;
 
     private ProcessReportWriter noMatchesReportWriter;
     private ProcessReportWriter complexesWithStructuresReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
-    private static final Bucket RATE_LIMITER_BUCKET = Bucket.builder().addLimit(Bandwidth.simple(1, Duration.ofSeconds(1))).build();
+    private Map<String, Collection<String>> complexesAlreadyProcessedWithMatches;
+    private Set<String> complexesAlreadyProcessedWithNoMatches;
 
     @Override
     public ComplexWithProteomeStructures process(IntactComplex item) throws Exception {
         String complexId = item.getComplexAc();
-        try {
-            Collection<String> structures = getQsProteomeStructuresWithRateLimit(complexId);
-            if (structures.isEmpty()) {
-                noMatchesReportWriter.write(complexId, item.isPredictedComplex(), List.of());
-            } else {
-                complexesWithStructuresReportWriter.write(complexId, item.isPredictedComplex(), structures);
-            }
+
+        if (complexesAlreadyProcessedWithMatches.containsKey(complexId)) {
             return ComplexWithProteomeStructures.builder()
                     .complexId(complexId)
-                    .qsProteomeIds(structures)
+                    .qsProteomeIds(complexesAlreadyProcessedWithMatches.get(complexId))
                     .build();
-        } catch (Exception e) {
-            log.error("Error processing QSProteome structures for complex: " + complexId, e);
-            errorReportWriter.write(List.of(complexId), e.getMessage());
+        } else if (complexesAlreadyProcessedWithNoMatches.contains(complexId)) {
+            return ComplexWithProteomeStructures.builder()
+                    .complexId(complexId)
+                    .qsProteomeIds(List.of())
+                    .build();
+        } else {
+            try {
+                Collection<String> structures = getQsProteomeStructuresWithRateLimit(complexId);
+                if (structures.isEmpty()) {
+                    noMatchesReportWriter.write(complexId, item.isPredictedComplex());
+                } else {
+                    complexesWithStructuresReportWriter.write(complexId, item.isPredictedComplex(), structures);
+                }
+                return ComplexWithProteomeStructures.builder()
+                        .complexId(complexId)
+                        .qsProteomeIds(structures)
+                        .build();
+            } catch (Exception e) {
+                log.error("Error processing QSProteome structures for complex: " + complexId, e);
+                errorReportWriter.write(List.of(complexId), e.getMessage());
+            }
         }
 
         return null;
@@ -101,17 +117,22 @@ public class ComplexQsProteomeProcessor extends AbstractBatchProcessor<IntactCom
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();
 
+        File matchesFile = new File(reportDirectory, "complexes_with_qs_proteome_matches" + extension);
+        File noMatchesFile = new File(reportDirectory, "no_matches" + extension);
+
+        complexesAlreadyProcessedWithMatches = qsProteomeStructuresFileReader.readStructuresFromFile(matchesFile);
+        complexesAlreadyProcessedWithNoMatches = qsProteomeStructuresFileReader.readComplexIdsFromFile(noMatchesFile);
+
         this.noMatchesReportWriter = new ProcessReportWriter(
-                new File(reportDirectory, "no_matches" + extension), sep, header, ProcessReportWriter.NO_MATCHES_HEADER_LINE);
+                noMatchesFile, sep, header, ProcessReportWriter.NO_MATCHES_HEADER_LINE, true);
         this.complexesWithStructuresReportWriter = new ProcessReportWriter(
-                new File(reportDirectory, "complexes_with_qs_proteome_matches" + extension), sep, header, ProcessReportWriter.COMPLEXES_WITH_QS_PROTEOME_STRUCTURES);
+                matchesFile, sep, header, ProcessReportWriter.COMPLEXES_WITH_QS_PROTEOME_STRUCTURES, true);
         this.errorReportWriter = new ErrorsReportWriter(
                 new File(reportDirectory, "process_errors" + extension), sep, header);
     }
 
     private Collection<String> getQsProteomeStructuresWithRateLimit(String complexId) throws IOException, InterruptedException {
         RATE_LIMITER_BUCKET.asBlocking().consumeUninterruptibly(1);
-//        rateLimiter.acquire();
         return getQsProteomeStructures(complexId);
     }
 

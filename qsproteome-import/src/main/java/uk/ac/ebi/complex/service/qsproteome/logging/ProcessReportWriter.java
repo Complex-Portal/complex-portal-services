@@ -13,8 +13,13 @@ public class ProcessReportWriter extends ReportWriter {
     public static final String[] COMPLEXES_WITH_QS_PROTEOME_STRUCTURES = new String[]{
             "complex_id", "is_predicted", "qs_proteome_structures" };
 
-    public ProcessReportWriter(File outputFile, String separator, boolean header, String[] headerline) throws IOException {
-        super(outputFile, separator, header, headerline);
+    public ProcessReportWriter(File outputFile, String separator, boolean header, String[] headerLine, boolean append) throws IOException {
+        super(outputFile, separator, header, headerLine, append);
+    }
+
+    public void write(String complexId, boolean predicted) throws IOException {
+        writeLine(new String[]{ complexId, String.valueOf(predicted) });
+        flush();
     }
 
     public void write(String complexId,
