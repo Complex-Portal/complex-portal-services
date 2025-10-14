@@ -6,7 +6,7 @@
 #SBATCH -p production   # partition(s)
 #SBATCH --mem=16G   # memory per node
 #SBATCH -o "/nfs/production/hhe/intact/data/db-import-logs/import-qs-proteome-structures-%j.out"   # job output file
-#SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
+#SBATCH --mail-user=intact-dev@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
 if [ $# -ne 5 ]; then
@@ -30,4 +30,4 @@ echo "Output directory: $OUTPUT_DIRECTORY"
 echo "Separator: $SEPARATOR"
 echo "Header: $HEADER"
 
-mvn clean -U install -P import-qsproteome-structures,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=complexQsProteomeImport -Dinput.file.name=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
+mvn clean -U install -P import-qsproteome-structures,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=complexQsProteomeImport -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
