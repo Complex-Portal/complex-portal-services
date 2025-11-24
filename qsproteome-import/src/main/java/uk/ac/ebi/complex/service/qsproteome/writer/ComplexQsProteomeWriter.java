@@ -213,7 +213,7 @@ public class ComplexQsProteomeWriter extends AbstractBatchWriter<ComplexWithProt
             if (xref instanceof InteractorXref) {
                 InteractorXref interactorXref = (InteractorXref) xref;
                 if (xrefToUpdate.getAc().equals(interactorXref.getAc())) {
-                    IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, QUALIFIER_MI);
+                    IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
                     interactorXref.setQualifier(qualifier);
                 }
             }
