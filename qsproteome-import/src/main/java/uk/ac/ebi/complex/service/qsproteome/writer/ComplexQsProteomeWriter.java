@@ -34,11 +34,8 @@ import java.util.stream.Collectors;
 @SuperBuilder
 public class ComplexQsProteomeWriter extends AbstractBatchWriter<ComplexWithProteomeStructures, Complex> {
 
-    // TODO
     private static final String DATABASE = "qsproteome";
-    private static final String DATABASE_MI = "unset";
-    private static final String QUALIFIER = "see-also";
-    private static final String QUALIFIER_MI = "unset";
+    private static final String DATABASE_MI = "MI:2443";
 
     private final IntactDao intactDao;
     private final Map<String, IntactCvTerm> cvTermMap = new HashMap<>();
@@ -116,18 +113,18 @@ public class ComplexQsProteomeWriter extends AbstractBatchWriter<ComplexWithProt
                                 complex.isPredictedComplex(),
                                 xrefsToRemove.stream().map(AbstractIntactXref::getId).collect(Collectors.toList()));
                     }
-//                    if (!appProperties.isDryRunMode()) {
-//                        if (!xrefsToAdd.isEmpty()) {
-//                            addNewXrefs(complex, xrefsToAdd);
-//                        }
-//                        if (!xrefsToRemove.isEmpty()) {
-//                            removeXrefs(complex, xrefsToRemove);
-//                        }
-//                        if (!xrefsToUpdate.isEmpty()) {
-//                            updateXrefs(complex, xrefsToUpdate);
-//                        }
-//                        complexesToSave.add(complex);
-//                    }
+                    if (!appProperties.isDryRunMode()) {
+                        if (!xrefsToAdd.isEmpty()) {
+                            addNewXrefs(complex, xrefsToAdd);
+                        }
+                        if (!xrefsToRemove.isEmpty()) {
+                            removeXrefs(complex, xrefsToRemove);
+                        }
+                        if (!xrefsToUpdate.isEmpty()) {
+                            updateXrefs(complex, xrefsToUpdate);
+                        }
+                        complexesToSave.add(complex);
+                    }
                 }
             } catch (Exception e) {
                 log.error("Error writing to DB complex xrefs for complex id: " + item.getComplexId(), e);
@@ -179,7 +176,7 @@ public class ComplexQsProteomeWriter extends AbstractBatchWriter<ComplexWithProt
             InteractorXref interactorXref = (InteractorXref) xref;
             if (interactorXref.getId().equalsIgnoreCase(structureId)) {
                 matchesFound.add(structureId);
-                if (!QUALIFIER_MI.equals(interactorXref.getQualifier().getMIIdentifier())) {
+                if (!Xref.IDENTITY_MI.equals(interactorXref.getQualifier().getMIIdentifier())) {
                     xrefsToUpdate.add(interactorXref);
                 }
                 return true;
@@ -191,7 +188,7 @@ public class ComplexQsProteomeWriter extends AbstractBatchWriter<ComplexWithProt
     private void addNewXrefs(IntactComplex complex, Collection<String> xrefsToAdd) throws CvTermNotFoundException {
         for (String xrefToAdd: xrefsToAdd) {
             IntactCvTerm database = findCvTerm(IntactUtils.DATABASE_OBJCLASS, DATABASE_MI);
-            IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, QUALIFIER_MI);
+            IntactCvTerm qualifier = findCvTerm(IntactUtils.QUALIFIER_OBJCLASS, Xref.IDENTITY_MI);
             InteractorXref newXref = new InteractorXref(database, xrefToAdd, qualifier);
             complex.getIdentifiers().add(newXref);
         }
