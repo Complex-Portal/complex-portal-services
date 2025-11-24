@@ -27,46 +27,52 @@ public class QsProteomeStructuresFileReader {
     private final FileConfiguration fileConfiguration;
 
     public Map<String, Collection<String>> readStructuresFromFile(File inputFile) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(inputFile));
-        CSVReader csvReader = new CSVReaderBuilder(reader)
-                .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
-                .build();
-
-        if (fileConfiguration.isHeader()) {
-            csvReader.skip(1);
-        }
-
         Map<String, Collection<String>> structuresByComplex = new HashMap<>();
-        csvReader.forEach(csvLine -> {
-            if (csvLine.length == 3) {
-                String complexId = csvLine[0];
-                List<String> structures = List.of(csvLine[2].split(" ")[0]);
-                structuresByComplex.put(complexId, structures);
+
+        if (inputFile.exists()) {
+            BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+            CSVReader csvReader = new CSVReaderBuilder(reader)
+                    .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
+                    .build();
+
+            if (fileConfiguration.isHeader()) {
+                csvReader.skip(1);
             }
-        });
-        csvReader.close();
+
+            csvReader.forEach(csvLine -> {
+                if (csvLine.length == 3) {
+                    String complexId = csvLine[0];
+                    List<String> structures = List.of(csvLine[2].split(" ")[0]);
+                    structuresByComplex.put(complexId, structures);
+                }
+            });
+            csvReader.close();
+        }
 
         return structuresByComplex;
     }
 
     public Set<String> readComplexIdsFromFile(File inputFile) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(inputFile));
-        CSVReader csvReader = new CSVReaderBuilder(reader)
-                .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
-                .build();
-
-        if (fileConfiguration.isHeader()) {
-            csvReader.skip(1);
-        }
-
         Set<String> complexIds = new HashSet<>();
-        csvReader.forEach(csvLine -> {
-            if (csvLine.length > 0) {
-                String complexId = csvLine[0];
-                complexIds.add(complexId);
+
+        if (inputFile.exists()) {
+            BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+            CSVReader csvReader = new CSVReaderBuilder(reader)
+                    .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
+                    .build();
+
+            if (fileConfiguration.isHeader()) {
+                csvReader.skip(1);
             }
-        });
-        csvReader.close();
+
+            csvReader.forEach(csvLine -> {
+                if (csvLine.length > 0) {
+                    String complexId = csvLine[0];
+                    complexIds.add(complexId);
+                }
+            });
+            csvReader.close();
+        }
 
         return complexIds;
     }
