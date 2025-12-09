@@ -8,7 +8,7 @@
 #SBATCH --mem=8G   # memory per node
 #SBATCH -J "COVARIATION_IMPORT"   # job name
 #SBATCH -o "/nfs/production/hhe/intact/data/protein-covariation-import-logs/import-protein-covariations-%j.out"   # job output file
-#SBATCH --mail-user=jmedina@ebi.ac.uk   # email address
+#SBATCH --mail-user=intact-dev@ebi.ac.uk   # email address
 #SBATCH --mail-type=ALL
 
 if [ $# -ne 7 ]; then
@@ -28,5 +28,8 @@ DATABASE_ID=$5
 SEPARATOR=$6
 HEADER=$7
 
-mvn clean -U install -P run-protein-covariation-job,${PROFILE} -Djob.name=importProteinCovariationsJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Ddatabase.id=$DATABASE_ID -Dseparator=$SEPARATOR -Dheader=$HEADER -Djami.user.context.id=${USER_ID} -DskipTests
+MAVEN_OPTS="$MAVEN_OPTS -Dmaven.wagon.http.ssl.insecure=true"
+MAVEN_OPTS="$MAVEN_OPTS -Dmaven.wagon.http.ssl.allowall=true"
+
+mvn clean install -P run-protein-covariation-job,${PROFILE} -Djob.name=importProteinCovariationsJob -Dinput.file.name=$INPUT_FILE -Dprocess.output.dir.name=$OUTPUT_DIR_NAME -Doutput.directory=$OUTPUT_DIRECTORY -Ddatabase.id=$DATABASE_ID -Dseparator=$SEPARATOR -Dheader=$HEADER -Djami.user.context.id=${USER_ID} -DskipTests
 

@@ -8,7 +8,7 @@
     <parent>
         <groupId>uk.ac.ebi.complex.portal</groupId>
         <artifactId>complex-services-master</artifactId>
-        <version>1.4.0-SNAPSHOT</version>
+        <version>1.5.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>music-import</artifactId>
