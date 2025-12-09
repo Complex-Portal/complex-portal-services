@@ -36,4 +36,7 @@ echo "Header: $HEADER"
 echo "Cell line: $CELL_LINE"
 echo "Input file fields: $INPUT_FILE_FIELDS"
 
-mvn clean -U install -P import-music-complexes,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=musicComplexesImport -Dinput.file.name=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -Dmusic.cell.line=$CELL_LINE -Dmusic.input.file.fields=$INPUT_FILE_FIELDS -Dmusic.publication.id= -Dmusic.field.values.separator= -DskipTests
+MAVEN_OPTS="$MAVEN_OPTS -Dmaven.wagon.http.ssl.insecure=true"
+MAVEN_OPTS="$MAVEN_OPTS -Dmaven.wagon.http.ssl.allowall=true"
+
+mvn clean install -P import-music-complexes,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=musicComplexesImport -Dinput.file.name=$INPUT_FILE -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -Dmusic.cell.line=$CELL_LINE -Dmusic.input.file.fields=$INPUT_FILE_FIELDS -Dmusic.publication.id= -Dmusic.field.values.separator= -DskipTests

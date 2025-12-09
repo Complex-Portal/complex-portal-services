@@ -132,7 +132,7 @@ public class ComplexQsProteomeProcessor extends AbstractBatchProcessor<IntactCom
     }
 
     private Collection<String> getQsProteomeStructuresWithRateLimit(String complexId) throws IOException, InterruptedException {
-        RATE_LIMITER_BUCKET.asBlocking().consumeUninterruptibly(1);
+        RATE_LIMITER_BUCKET.asBlocking().tryConsumeUninterruptibly(1, Duration.ofMinutes(15L));
         return getQsProteomeStructures(complexId);
     }
 

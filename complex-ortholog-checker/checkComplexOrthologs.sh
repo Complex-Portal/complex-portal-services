@@ -33,4 +33,7 @@ echo "Output directory: $OUTPUT_DIRECTORY"
 echo "Separator: $SEPARATOR"
 echo "Header: $HEADER"
 
-mvn clean -U install -P check-complex-orthologs,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=checkOrthologsJob -Dinput.tax.id=$INPUT_TAX_ID -Doutput.tax.id=$OUTPUT_TAX_ID -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
+MAVEN_OPTS="$MAVEN_OPTS -Dmaven.wagon.http.ssl.insecure=true"
+MAVEN_OPTS="$MAVEN_OPTS -Dmaven.wagon.http.ssl.allowall=true"
+
+mvn clean install -P check-complex-orthologs,${PROFILE} -Djami.user.context.id=${USER_ID} -Djob.name=checkOrthologsJob -Dinput.tax.id=$INPUT_TAX_ID -Doutput.tax.id=$OUTPUT_TAX_ID -Doutput.directory=$OUTPUT_DIRECTORY -Dseparator=$SEPARATOR -Dheader=$HEADER -DskipTests
