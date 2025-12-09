@@ -1,4 +1,4 @@
-# PDB Import
+# QSProteome Import
 
 ## Introduction
 
@@ -16,7 +16,7 @@ To actually import data into the database, change property 'dry.run.mode' in the
 
 ### Input arguments
 
-The scripts take the following 6 input arguments:
+The script takes the following 5 input arguments:
 1. Maven profile
 2. IntAct editor username
 3. Directory to write report and output files

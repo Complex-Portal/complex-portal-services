@@ -15,7 +15,7 @@ complexes found.
 
 ### Input arguments
 
-The script takes the following 6 input arguments:
+The script takes the following 7 input arguments:
 1. Maven profile
 2. IntAct editor username
 3. Input Tax id
