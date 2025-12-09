@@ -12,7 +12,7 @@ By default, this script won't actually make any modifications in the database, i
 complexes that would be created and updated based on the input data.
 
 To actually import data into the database, change property 'dry.run.mode' in the file
-[qsproteome-import.properties](src/main/resources/META-INF/qsproteome-import.properties)[pdb-import.properties](src/main/resources/META-INF/pdb-import.properties) to false.
+[pdb-import.properties](src/main/resources/META-INF/pdb-import.properties) to false.
 
 ### Input arguments
 
