@@ -19,8 +19,8 @@
     <name>Complex Services</name>
 
     <properties>
-        <psi.jami.version>3.9.1-SNAPSHOT</psi.jami.version>
-        <intact.jami.version>3.2.3-SNAPSHOT</intact.jami.version>
+        <psi.jami.version>3.9.2-SNAPSHOT</psi.jami.version>
+        <intact.jami.version>3.2.4-SNAPSHOT</intact.jami.version>
         <spring.version>4.3.30.RELEASE</spring.version>
         <lombok.version>1.18.28</lombok.version>
         <jackson.version>2.15.2</jackson.version>
