@@ -67,6 +67,9 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     public static final String WWPDB_DB_MI = "MI:0805";
     public static final String WWPDB_DB_NAME = "wwpdb";
 
+    public static final String EVIDENCE_ONTOLOGY_DB_MI = "MI:1331";
+    public static final String EVIDENCE_ONTOLOGY_DB_NAME = "evidence ontology";
+
     public static final String ML_ECO_CODE = "ECO:0008004";
     public static final String COMP_EVIDENCE_ECO_CODE = "ECO:0007653";
 
@@ -138,7 +141,14 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     protected boolean doesComplexEcoCodeNeedUpdating(IntactComplex complex) {
         String expectedEcoCode = getEcoCodeExpectedForComplex(complex);
         if (expectedEcoCode != null) {
-            return !complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode);
+            if (complex.getEvidenceType() != null) {
+                Xref evidenceTypeIdentifier = XrefUtils.collectFirstIdentifierWithDatabase(
+                        complex.getEvidenceType().getIdentifiers(), EVIDENCE_ONTOLOGY_DB_MI, EVIDENCE_ONTOLOGY_DB_NAME);
+                if (evidenceTypeIdentifier != null) {
+                    return !evidenceTypeIdentifier.getId().equals(expectedEcoCode);
+                }
+            }
+            return true;
         }
         return false;
     }
@@ -212,7 +222,16 @@ public abstract class ComplexManager<T, R extends ComplexToImport<T>> {
     protected void setComplexEvidenceType(IntactComplex complex) throws CvTermNotFoundException {
         String expectedEcoCode = getEcoCodeExpectedForComplex(complex);
         if (expectedEcoCode != null) {
-            if (complex.getEvidenceType() == null || !complex.getEvidenceType().getMIIdentifier().equals(expectedEcoCode)) {
+            String complexEvidenceType = null;
+            if (complex.getEvidenceType() != null) {
+                Xref evidenceTypeIdentifier = XrefUtils.collectFirstIdentifierWithDatabase(
+                        complex.getEvidenceType().getIdentifiers(), EVIDENCE_ONTOLOGY_DB_MI, EVIDENCE_ONTOLOGY_DB_NAME);
+                if (evidenceTypeIdentifier != null) {
+                    complexEvidenceType = evidenceTypeIdentifier.getId();
+                }
+            }
+
+            if (complexEvidenceType == null || !complexEvidenceType.equals(expectedEcoCode)) {
                 IntactCvTerm evidenceType = findCvTerm(IntactUtils.DATABASE_OBJCLASS, expectedEcoCode);
                 complex.setEvidenceType(evidenceType);
             }
