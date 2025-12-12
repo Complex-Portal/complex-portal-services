@@ -114,6 +114,18 @@ public class ComplexFinder {
             } else {
                 // If no exact matches, we look for partial matches
 
+                if (complexFinderOptions.isCheckAnyStatusForExactMatches()) {
+                    // If we have not found an exact match for the latest version of the complex, we check
+                    // older versions in case there was a match, but it's now been put on hold,
+                    // as we do don't want to create a new complex
+                    ComplexFinderResult.ExactMatch<IntactComplex> olderVersionExactMatch = findExactMatchOnOlderVersions(
+                            complex, curatedComplexProteins, proteins);
+                    
+                    if (olderVersionExactMatch != null) {
+                        exactMatches.put(complex.getComplexAc(), exactMatch);
+                    }
+                }
+
                 // For partial matches, we only consider complexes released or ready for release, and only curated complexes
                 if (!complex.isPredictedComplex() &&
                         (LifeCycleStatus.RELEASED.equals(complex.getStatus()) || LifeCycleStatus.READY_FOR_RELEASE.equals(complex.getStatus()))) {
@@ -152,6 +164,29 @@ public class ComplexFinder {
                     complex.isPredictedComplex(),
                     getExactMatchType(complex),
                     complex);
+        }
+        return null;
+    }
+
+    private ComplexFinderResult.ExactMatch<IntactComplex> findExactMatchOnOlderVersions(
+            IntactComplex complex,
+            Collection<ModelledComparableParticipant> curatedComplexProteins,
+            Collection<ModelledComparableParticipant> proteins) {
+
+        if (complex.getComplexVersion() != null && !complex.getComplexVersion().equals("1")) {
+            Collection<IntactComplex> allVersionsOfComplex = intactDao.getComplexDao().getByComplexAc(complex.getComplexAc());
+            for (IntactComplex versionOfComplex: allVersionsOfComplex) {
+                if (versionOfComplex.getComplexVersion() != null &&
+                        !versionOfComplex.getComplexVersion().equals(complex.getComplexVersion())) {
+
+                    ComplexFinderResult.ExactMatch<IntactComplex> exactMatch = findExactMatch(
+                            versionOfComplex, curatedComplexProteins, proteins);
+
+                    if (exactMatch != null) {
+                        return exactMatch;
+                    }
+                }
+            }
         }
         return null;
     }
