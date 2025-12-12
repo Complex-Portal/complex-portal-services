@@ -202,30 +202,30 @@ public class UniPlexImportConfig {
                 .build();
     }
 
-//    @Bean
-//    public Step processUniplexFile(
-//            PlatformTransactionManager jamiTransactionManager,
-//            JobRepositoryFactoryBean basicBatchJobRepository,
-//            UniplexFileProcessorTasklet uniplexFileProcessorTasklet) throws Exception {
-//
-//        return basicStepBuilder("processUniplexFile", jamiTransactionManager, basicBatchJobRepository)
-//                .tasklet(uniplexFileProcessorTasklet)
-//                .build();
-//    }
+    @Bean
+    public Step processUniplexFile(
+            PlatformTransactionManager jamiTransactionManager,
+            JobRepositoryFactoryBean basicBatchJobRepository,
+            UniplexFileProcessorTasklet uniplexFileProcessorTasklet) throws Exception {
+
+        return basicStepBuilder("processUniplexFile", jamiTransactionManager, basicBatchJobRepository)
+                .tasklet(uniplexFileProcessorTasklet)
+                .build();
+    }
 
     @Bean
     public Job uniplexClusterImport(
             JobRepositoryFactoryBean basicBatchJobRepository,
             SimpleJobListener basicJobLoggerListener,
-//            @Qualifier("processUniplexFile") Step processUniplexFile,
+            @Qualifier("processUniplexFile") Step processUniplexFile,
             @Qualifier("uniplexClusterImportStep") Step importStep,
             @Qualifier("deleteOldXrefsStep") Step deleteOldXrefsStep) throws Exception {
 
         return new JobBuilder("uniplexClusterImport")
                 .repository(basicBatchJobRepository.getObject())
                 .listener(basicJobLoggerListener)
-//                .start(processUniplexFile)
-                .start(importStep)
+                .start(processUniplexFile)
+                .next(importStep)
                 .next(deleteOldXrefsStep)
                 .build();
     }
