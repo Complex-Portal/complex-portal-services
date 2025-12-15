@@ -72,11 +72,13 @@ public class UniPlexImportConfig {
 
     @Bean
     public ComplexImportBatchProcessor<Integer, UniplexCluster> uniplexBatchProcessor(
+            AppProperties appProperties,
             ComplexFinder complexFinder,
             UniplexComplexManager uniplexComplexManager,
             FileConfiguration fileConfiguration) {
 
         return ComplexImportBatchProcessor.<Integer, UniplexCluster>builder()
+                .appProperties(appProperties)
                 .complexFinder(complexFinder)
                 .complexManager(uniplexComplexManager)
                 .fileConfiguration(fileConfiguration)
