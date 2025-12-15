@@ -33,20 +33,32 @@ public class ComplexFinder {
         this.comparableParticipantsComparator = new CollectionComparator<>(participantComparator);
     }
 
+    public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteinsInComplexes(
+            Collection<String> proteinIds,
+            Collection<String> complexIds,
+            ComplexFinderOptions complexFinderOptions) {
+
+        return findComplexWithMatchingProteins(proteinIds, complexIds, complexFinderOptions);
+    }
+
     public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteins(
             Collection<String> proteinIds,
             ComplexFinderOptions complexFinderOptions) {
 
         Collection<IntactComplex> allComplexes = getComplexesInvolvingProteins(proteinIds);
 
-        Collection<IntactComplex> complexes;
-        if (complexFinderOptions.isCheckPredictedComplexes()) {
-            complexes = allComplexes;
-        } else {
-            complexes = allComplexes.stream()
-                    .filter(complex -> !complex.isPredictedComplex()) // Filter out predicted complexes
-                    .collect(Collectors.toList());
-        }
+        Collection<String> complexIds = allComplexes.stream()
+                .filter(complex -> complexFinderOptions.isCheckPredictedComplexes() || !complex.isPredictedComplex())
+                .map(IntactComplex::getComplexAc)
+                .collect(Collectors.toList());
+
+        return findComplexWithMatchingProteins(proteinIds, complexIds, complexFinderOptions);
+    }
+
+    public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteins(
+            Collection<String> proteinIds,
+            Collection<String> complexIds,
+            ComplexFinderOptions complexFinderOptions) {
 
         Collection<ModelledComparableParticipant> proteins = proteinIds.stream()
                 .map(proteinId -> new ModelledComparableParticipant(
@@ -63,8 +75,8 @@ public class ComplexFinder {
         Map<String, ComplexFinderResult.ExactMatch<IntactComplex>> exactMatchesMap = new HashMap<>();
         Map<String, ComplexFinderResult.PartialMatch<IntactComplex>> partialMatchesMap = new HashMap<>();
 
-        for (IntactComplex complex : complexes) {
-            findComplexMatches(complex.getComplexAc(), proteins, proteinCacheMap, exactMatchesMap, partialMatchesMap, complexFinderOptions);
+        for (String complexId : complexIds) {
+            findComplexMatches(complexId, proteins, proteinCacheMap, exactMatchesMap, partialMatchesMap, complexFinderOptions);
         }
 
         List<ComplexFinderResult.ExactMatch<IntactComplex>> exactMatches = new ArrayList<>(exactMatchesMap.values());
@@ -122,7 +134,7 @@ public class ComplexFinder {
                             complex, curatedComplexProteins, proteins);
                     
                     if (olderVersionExactMatch != null) {
-                        exactMatches.put(complex.getComplexAc(), exactMatch);
+                        exactMatches.put(complex.getComplexAc(), olderVersionExactMatch);
                     }
                 }
 

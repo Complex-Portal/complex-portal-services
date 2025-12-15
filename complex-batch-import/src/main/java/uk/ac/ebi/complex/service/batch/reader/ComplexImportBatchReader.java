@@ -5,9 +5,6 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
-import org.springframework.batch.item.NonTransientResourceException;
-import org.springframework.batch.item.ParseException;
-import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.util.Assert;
 import uk.ac.ebi.complex.service.batch.config.FileConfiguration;
 import uk.ac.ebi.complex.service.batch.model.ComplexToImport;
@@ -29,7 +26,7 @@ public class ComplexImportBatchReader<T, R extends ComplexToImport<T>> implement
     private int complexCount = 0;
 
     @Override
-    public R read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
+    public R read() throws Exception {
         R nextObject = complexIterator.hasNext() ? complexIterator.next() : null;
         this.complexCount++;
         return nextObject;

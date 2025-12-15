@@ -138,7 +138,6 @@ public class ComplexXrefDeleteProcessor<T, R extends ComplexToImport<T>> extends
                 .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
                 .build();
 
-
         if (fileConfiguration.isHeader()) {
             csvReader.skip(1);
         }

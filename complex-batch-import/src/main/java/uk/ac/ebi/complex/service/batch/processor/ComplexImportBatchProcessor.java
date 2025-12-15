@@ -2,11 +2,15 @@ package uk.ac.ebi.complex.service.batch.processor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.log4j.Log4j;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.util.Assert;
+import uk.ac.ebi.complex.service.batch.config.AppProperties;
 import uk.ac.ebi.complex.service.finder.ComplexFinder;
 import uk.ac.ebi.complex.service.finder.ComplexFinderOptions;
 import uk.ac.ebi.complex.service.finder.ComplexFinderResult;
@@ -19,12 +23,17 @@ import uk.ac.ebi.complex.service.batch.model.ComplexToImport;
 import uk.ac.ebi.intact.jami.model.extension.IntactComplex;
 import uk.ac.ebi.intact.jami.model.lifecycle.LifeCycleStatus;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,6 +41,7 @@ import java.util.stream.Collectors;
 @SuperBuilder
 public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extends AbstractBatchProcessor<R, ComplexWithMatches<T, R>> {
 
+    private final AppProperties appProperties;
     private final ComplexFinder complexFinder;
     private final ComplexManager<T, R> complexManager;
 
@@ -41,16 +51,32 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
     private ProcessReportWriter noMatchesReportWriter;
     private ErrorsReportWriter errorReportWriter;
 
+    private Map<String, Set<String>> matchesAlreadyProcessed;
+
     @Override
     public ComplexWithMatches<T, R> process(R item) throws Exception {
         try {
-            ComplexFinderResult<IntactComplex> complexFinderResult = this.complexFinder.findComplexWithMatchingProteins(
-                    item.getProteinIds(),
-                    ComplexFinderOptions.builder()
-                            .checkPredictedComplexes(true)
-                            .checkAnyStatusForExactMatches(true)
-                            .checkPartialMatches(true)
-                            .build());
+            ComplexFinderOptions complexFinderOptions = ComplexFinderOptions.builder()
+                    .checkPredictedComplexes(true)
+                    .checkAnyStatusForExactMatches(true)
+                    .checkPartialMatches(true)
+                    .build();
+
+            Set<String> matchesAlreadyFound = new HashSet<>();
+            for (String id: item.getComplexIds()) {
+                if (matchesAlreadyProcessed.containsKey(id)) {
+                    matchesAlreadyFound.addAll(matchesAlreadyProcessed.get(id));
+                }
+            }
+
+            ComplexFinderResult<IntactComplex> complexFinderResult;
+            if (matchesAlreadyFound.isEmpty()) {
+                complexFinderResult = this.complexFinder.findComplexWithMatchingProteins(
+                        item.getProteinIds(), complexFinderOptions);
+            } else {
+                complexFinderResult = this.complexFinder.findComplexWithMatchingProteinsInComplexes(
+                        item.getProteinIds(), matchesAlreadyFound, complexFinderOptions);
+            }
 
             List<ComplexFinderResult.ExactMatch<IntactComplex>> exactMatchesToConsider = complexFinderResult.getExactMatches()
                     .stream()
@@ -107,7 +133,7 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
                         Set.copyOf(item.getProteinIds()),
                         supersetOfComplexes);
             } else {
-                 clusterGroupComplexes = List.of();
+                clusterGroupComplexes = List.of();
             }
 
             return new ComplexWithMatches<>(
@@ -158,6 +184,13 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
         String sep = fileConfiguration.getSeparator();
         boolean header = fileConfiguration.isHeader();
         String extension = fileConfiguration.getExtension();
+
+        matchesAlreadyProcessed = new HashMap<>();
+        if (appProperties.isReuseExistingFiles()) {
+            readComplexIdsFromFile(new File(reportDirectory, "exact_matches" + extension));
+            readComplexIdsFromFile(new File(reportDirectory, "multiple_exact_matches" + extension));
+            readComplexIdsFromFile(new File(reportDirectory, "partial_matches" + extension));
+        }
 
         this.exactMatchesReportWriter = new ProcessReportWriter(
                 new File(reportDirectory, "exact_matches" + extension), sep, header, ProcessReportWriter.EXACT_MATCH_HEADER_LINE);
@@ -337,5 +370,30 @@ public class ComplexImportBatchProcessor<T, R extends ComplexToImport<T>> extend
 
     private void logNoMatches(R item) throws IOException {
         noMatchesReportWriter.write(item.getComplexIds(), item.getProteinIds());
+    }
+
+    private void readComplexIdsFromFile(File inputFile) throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+        CSVReader csvReader = new CSVReaderBuilder(reader)
+                .withCSVParser(new CSVParserBuilder().withSeparator(fileConfiguration.getSeparator().charAt(0)).build())
+                .build();
+
+        if (fileConfiguration.isHeader()) {
+            csvReader.skip(1);
+        }
+
+        csvReader.forEach(csvLine -> {
+            if (csvLine.length > 1 || (csvLine.length == 1 && !csvLine[0].isEmpty())) {
+                String[] ids = csvLine[0].split(" ");
+                String[] complexIds = csvLine[2].split(" ");
+                for (String id: ids) {
+                    matchesAlreadyProcessed.putIfAbsent(id, new HashSet<>());
+                    for (String complexId : complexIds) {
+                        matchesAlreadyProcessed.get(id).add(complexId);
+                    }
+                }
+            }
+        });
+        csvReader.close();
     }
 }
