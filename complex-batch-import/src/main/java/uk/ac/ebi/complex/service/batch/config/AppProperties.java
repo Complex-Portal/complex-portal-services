@@ -34,7 +34,4 @@ public class AppProperties {
 
     @Value("${dry.run.mode}")
     private boolean dryRunMode;
-
-    @Value("${reuse.existing.files}")
-    private boolean reuseExistingFiles;
 }

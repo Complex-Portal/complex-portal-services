@@ -33,14 +33,6 @@ public class ComplexFinder {
         this.comparableParticipantsComparator = new CollectionComparator<>(participantComparator);
     }
 
-    public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteinsInComplexes(
-            Collection<String> proteinIds,
-            Collection<String> complexIds,
-            ComplexFinderOptions complexFinderOptions) {
-
-        return findComplexWithMatchingProteins(proteinIds, complexIds, complexFinderOptions);
-    }
-
     public ComplexFinderResult<IntactComplex> findComplexWithMatchingProteins(
             Collection<String> proteinIds,
             ComplexFinderOptions complexFinderOptions) {
@@ -131,7 +123,7 @@ public class ComplexFinder {
                     // older versions in case there was a match, but it's now been put on hold,
                     // as we do don't want to create a new complex
                     ComplexFinderResult.ExactMatch<IntactComplex> olderVersionExactMatch = findExactMatchOnOlderVersions(
-                            complex, curatedComplexProteins, proteins);
+                            complex, proteinCacheMap, proteins);
                     
                     if (olderVersionExactMatch != null) {
                         exactMatches.put(complex.getComplexAc(), olderVersionExactMatch);
@@ -182,7 +174,7 @@ public class ComplexFinder {
 
     private ComplexFinderResult.ExactMatch<IntactComplex> findExactMatchOnOlderVersions(
             IntactComplex complex,
-            Collection<ModelledComparableParticipant> curatedComplexProteins,
+            Map<String, IntactProtein> proteinCacheMap,
             Collection<ModelledComparableParticipant> proteins) {
 
         if (complex.getComplexVersion() != null && !complex.getComplexVersion().equals("1")) {
@@ -191,6 +183,7 @@ public class ComplexFinder {
                 if (versionOfComplex.getComplexVersion() != null &&
                         !versionOfComplex.getComplexVersion().equals(complex.getComplexVersion())) {
 
+                    Collection<ModelledComparableParticipant> curatedComplexProteins = getProteinComponents(versionOfComplex, proteinCacheMap);
                     ComplexFinderResult.ExactMatch<IntactComplex> exactMatch = findExactMatch(
                             versionOfComplex, curatedComplexProteins, proteins);
 
